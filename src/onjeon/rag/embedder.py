@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import re
+import zlib
 from typing import Protocol
 
 _TOKEN_RE = re.compile(r"[\w가-힣]+")
@@ -21,7 +22,11 @@ class Embedder(Protocol):
 
 
 class HashEmbedder:
-    """토큰 해시 bag-of-words 임베딩 (L2 정규화). 폴백·테스트 전용."""
+    """토큰 해시 bag-of-words 임베딩 (L2 정규화). 폴백·테스트 전용.
+
+    버킷은 crc32 기반 — 내장 hash()는 PYTHONHASHSEED로 프로세스마다 달라져
+    '결정론' 계약과 디스크 영속 색인(프로세스 재시작 후 질의)을 깨뜨린다.
+    """
 
     def __init__(self, dim: int = 256):
         self.dim = dim
@@ -31,7 +36,7 @@ class HashEmbedder:
         for text in texts:
             vec = [0.0] * self.dim
             for token in _TOKEN_RE.findall(text.lower()):
-                vec[hash(token) % self.dim] += 1.0
+                vec[zlib.crc32(token.encode("utf-8")) % self.dim] += 1.0
             norm = math.sqrt(sum(x * x for x in vec)) or 1.0
             vectors.append([x / norm for x in vec])
         return vectors

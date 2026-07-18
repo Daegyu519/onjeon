@@ -13,6 +13,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "requests>=2.32",
     "qdrant-client>=1.12",
+    "pydantic>=2.7",
+    "tenacity>=9.0",
 ]
 
 [project.optional-dependencies]
