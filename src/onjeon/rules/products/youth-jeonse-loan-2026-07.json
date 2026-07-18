@@ -1,0 +1,54 @@
+{
+  "rule_id": "youth-jeonse-loan-2026-07",
+  "product_name": "청년전용 버팀목전세자금대출 [확인: 정식 명칭·요강]",
+  "version": "2026-07 기준",
+  "source": {
+    "url": "https://nhuf.molit.go.kr [확인: 공고 원문 URL]",
+    "clause_refs": ["대출대상 제1~4호"]
+  },
+  "criteria": [
+    {
+      "field": "age",
+      "op": "<=",
+      "value": 34,
+      "clause": "대출대상 제1호 (만 19~34세) [확인]",
+      "boundary_tests": [
+        { "input": 34, "expect": true },
+        { "input": 35, "expect": false }
+      ]
+    },
+    {
+      "field": "annual_income_krw",
+      "op": "<=",
+      "value": 50000000,
+      "clause": "대출대상 제2호 (연소득 5천만원 이하) [확인]",
+      "boundary_tests": [
+        { "input": 50000000, "expect": true },
+        { "input": 50000001, "expect": false }
+      ]
+    },
+    {
+      "field": "assets_krw",
+      "op": "<=",
+      "value": 337000000,
+      "clause": "대출대상 제3호 (자산 3.37억 이하) [확인: 최신 기준액]",
+      "boundary_tests": [
+        { "input": 337000000, "expect": true },
+        { "input": 337000001, "expect": false }
+      ]
+    },
+    {
+      "field": "deposit_krw",
+      "op": "<=",
+      "value": 300000000,
+      "clause": "대상주택 (수도권 보증금 3억 이하) [확인]",
+      "boundary_tests": [
+        { "input": 300000000, "expect": true },
+        { "input": 300000001, "expect": false }
+      ]
+    }
+  ],
+  "alternatives": [],
+  "confidence": "high",
+  "approved_by_human": true
+}

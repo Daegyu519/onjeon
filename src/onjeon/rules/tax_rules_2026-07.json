@@ -1,0 +1,24 @@
+{
+  "version": "2026-07",
+  "note": "[확인] 2026년 세법 기준 재검증 필요 — 제출 전 국가법령정보 원문 대조",
+  "wolse_tax_credit": {
+    "clause": "조세특례제한법 §95-2 [확인: 2026년 개정 여부]",
+    "brackets": [
+      { "max_income_krw": 55000000, "rate": 0.17 },
+      { "max_income_krw": 80000000, "rate": 0.15 }
+    ],
+    "annual_rent_cap_krw": 10000000
+  },
+  "acquisition": {
+    "clause": "지방세법 §11 (6억 이하 주택, 지방교육세 포함) [확인]",
+    "rate": 0.011
+  },
+  "holding": {
+    "clause": "지방세법 §111 재산세 개산 추정치 [확인]",
+    "estimate_rate": 0.0015
+  },
+  "brokerage": {
+    "clause": "공인중개사법 시행규칙 §20 상한요율 (매매 2억~9억 구간) [확인]",
+    "buy_rate": 0.005
+  }
+}

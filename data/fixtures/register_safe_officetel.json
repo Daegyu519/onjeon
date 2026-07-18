@@ -1,0 +1,21 @@
+{
+  "property": {
+    "address": "서울특별시 관악구 ○○로 45 ○○오피스텔 811호",
+    "building_type": "오피스텔",
+    "region": "관악구",
+    "market_price_krw": 200000000,
+    "price_source": { "api": "국토부 실거래가", "queried_at": "2026-07-15" }
+  },
+  "register": {
+    "title_section": { "owner": "박○○", "ownership_changes": [] },
+    "gap_section": [],
+    "eul_section": [],
+    "senior_lease_deposits_krw": 0
+  },
+  "offer": {
+    "wolse_deposit_krw": 10000000,
+    "monthly_rent_krw": 650000,
+    "insured": false,
+    "note": "근저당 없는 안전 매물 (데모용 가상 매물)"
+  }
+}

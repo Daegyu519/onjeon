@@ -1,0 +1,8 @@
+{
+  "version": "2026-07",
+  "note": "[확인] 금리·수익률은 데모용 대표값 — 제출 전 실금리로 갱신",
+  "loan_rate_jeonse": 0.035,
+  "loan_rate_buy": 0.045,
+  "opportunity_rate": 0.04,
+  "opportunity_source": "청년도약계좌 대안수익률 [확인: 현재 금리]"
+}

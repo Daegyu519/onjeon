@@ -1,0 +1,9 @@
+# Streamlit Community Cloud 배포용 — 로컬 개발은 pyproject.toml([dev,llm]) 사용
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+streamlit>=1.38
+jsonschema>=4.23
+matplotlib>=3.9
+google-genai>=1.0
+anthropic>=0.40

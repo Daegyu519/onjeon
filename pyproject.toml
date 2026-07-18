@@ -1,0 +1,32 @@
+[project]
+name = "onjeon"
+version = "0.1.0"
+description = "온전(穩全) — 리스크 조정 주거비용 기반 청년 주거 의사결정 AI (KB Future Finance A.I. Challenge MVP)"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "streamlit>=1.38",
+    "jsonschema>=4.23",
+    "matplotlib>=3.9",
+]
+
+[project.optional-dependencies]
+llm = ["google-genai>=1.0", "anthropic>=0.40"]
+xai = ["shap>=0.46"]
+dev = ["pytest>=8.3"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+onjeon = ["rules/*.json", "rules/products/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

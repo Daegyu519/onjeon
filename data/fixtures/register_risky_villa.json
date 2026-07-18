@@ -1,0 +1,30 @@
+{
+  "property": {
+    "address": "서울특별시 관악구 ○○동 12-3 ○○빌라 302호",
+    "building_type": "빌라",
+    "region": "관악구",
+    "market_price_krw": 150000000,
+    "price_source": { "api": "국토부 실거래가", "queried_at": "2026-07-15" }
+  },
+  "register": {
+    "title_section": { "owner": "홍○○", "ownership_changes": [] },
+    "gap_section": [],
+    "eul_section": [
+      {
+        "rank": 1,
+        "type": "근저당권설정",
+        "max_claim_krw": 72000000,
+        "set_date": "2024-11-02",
+        "cancelled": false,
+        "source_loc": { "page": 2, "section": "을구", "entry_no": 3 }
+      }
+    ],
+    "senior_lease_deposits_krw": 0
+  },
+  "offer": {
+    "jeonse_deposit_krw": 120000000,
+    "sale_price_krw": 150000000,
+    "insured": false,
+    "note": "전세가율 80% + 근저당/시세 48% — 깡통전세 신호 매물 (데모용 가상 매물)"
+  }
+}

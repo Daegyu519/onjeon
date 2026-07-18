@@ -1,0 +1,44 @@
+{
+  "rule_id": "sme-youth-jeonse-2026-07",
+  "product_name": "중소기업취업청년 전월세보증금대출 [확인: 정식 명칭·요강]",
+  "version": "2026-07 기준",
+  "source": {
+    "url": "https://nhuf.molit.go.kr [확인: 공고 원문 URL]",
+    "clause_refs": ["대출대상 제1~3호"]
+  },
+  "criteria": [
+    {
+      "field": "age",
+      "op": "<=",
+      "value": 34,
+      "clause": "대출대상 제1호 (만 19~34세) [확인]",
+      "boundary_tests": [
+        { "input": 34, "expect": true },
+        { "input": 35, "expect": false }
+      ]
+    },
+    {
+      "field": "annual_income_krw",
+      "op": "<=",
+      "value": 35000000,
+      "clause": "대출대상 제2호 (연소득 3천5백만원 이하) [확인]",
+      "boundary_tests": [
+        { "input": 35000000, "expect": true },
+        { "input": 35000001, "expect": false }
+      ]
+    },
+    {
+      "field": "deposit_krw",
+      "op": "<=",
+      "value": 200000000,
+      "clause": "대상주택 (보증금 2억 이하) [확인]",
+      "boundary_tests": [
+        { "input": 200000000, "expect": true },
+        { "input": 200000001, "expect": false }
+      ]
+    }
+  ],
+  "alternatives": ["youth-jeonse-loan-2026-07"],
+  "confidence": "high",
+  "approved_by_human": true
+}
