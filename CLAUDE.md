@@ -69,7 +69,8 @@ idea/
 │   ├── config.py        ← .env 로더 (키: .env.example 참조)
 │   ├── display.py       ← 표시 계층 (만원 변환·인용 라벨은 여기서만)
 │   ├── data_pipeline/   ← 데이터 수집 (실거래가 API, 낙찰가율 룰 생성기)
-│   ├── rag/             ← 조항 색인 (Qdrant 임베디드 + FastEmbed) — 인용·검색 전용, 판정 금지
+│   ├── rag/             ← 조항 색인 — Qdrant 하이브리드(dense+sparse RRF) + 골든셋 평가(eval.py)
+│   │                       인용·검색 전용, 판정 금지. 임베딩: ONJEON_EMBED_MODEL(로컬 e5-large 권장)
 │   ├── compare.py       ← 전 레이어 오케스트레이터 (UI·L4 공용, LLM 없음)
 │   ├── rules_io.py      ← 버전 태그 룰 DB 로더
 │   ├── l0/rule_pipeline.py  ← 공고 → 룰 JSON (추출/검증 LLM 분리 강제)

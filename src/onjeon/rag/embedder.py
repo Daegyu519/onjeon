@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 import zlib
 from typing import Protocol
@@ -42,15 +43,49 @@ class HashEmbedder:
         return vectors
 
 
+class SparseHashEncoder:
+    """결정론 sparse 인코더 — 토큰 crc32 인덱스 + 등장 횟수 값.
+
+    한국어 형태소 분석기 없이 언어 중립으로 동작한다. IDF 가중은
+    Qdrant 컬렉션의 Modifier.IDF가 서버측에서 수행하므로 이 인코더는
+    무상태·프로세스 경계 안전(crc32)이다.
+    """
+
+    def encode(self, text: str) -> tuple[list[int], list[float]]:
+        counts: dict[int, float] = {}
+        for token in _TOKEN_RE.findall(text.lower()):
+            idx = zlib.crc32(token.encode("utf-8"))
+            counts[idx] = counts.get(idx, 0.0) + 1.0
+        return list(counts.keys()), list(counts.values())
+
+
 class FastEmbedEmbedder:
-    """FastEmbed(ONNX) 다국어 소형 모델 — 한국어 지원, CPU, API 비용 0."""
+    """FastEmbed(ONNX) 다국어 모델 — CPU, API 비용 0.
+
+    모델은 ONJEON_EMBED_MODEL 환경변수로 교체 가능. 차원은 fastembed
+    지원 목록 메타에서 자동 결정한다(하드코딩 금지).
+    기본값은 소형 MiniLM 유지 — Streamlit Cloud 무료 티어 메모리 제약 때문.
+    상위 후보는 intfloat/multilingual-e5-large(1024d, ~2.2GB): 골든셋 실측
+    수치로 전환을 결정한다. bge-m3는 설치된 fastembed 버전 미지원(2026-07 확인).
+    e5 계열은 query/passage 프리픽스가 필요하므로 fastembed의
+    query_embed/passage_embed를 사용한다.
+    """
 
     DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
     def __init__(self, model_name: str | None = None):
-        self.model_name = model_name or self.DEFAULT_MODEL
-        self.dim = 384
+        self.model_name = model_name or os.environ.get("ONJEON_EMBED_MODEL", self.DEFAULT_MODEL)
+        self.dim = self._resolve_dim(self.model_name)
         self._model = None
+
+    @staticmethod
+    def _resolve_dim(model_name: str) -> int:
+        from fastembed import TextEmbedding
+
+        for meta in TextEmbedding.list_supported_models():
+            if meta["model"] == model_name:
+                return int(meta["dim"])
+        raise ValueError(f"fastembed 미지원 모델: {model_name!r}")
 
     def _get_model(self):
         if self._model is None:
@@ -60,7 +95,12 @@ class FastEmbedEmbedder:
         return self._model
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        return [list(map(float, v)) for v in self._get_model().embed(texts)]
+        """문서(passage) 임베딩 — e5 계열 프리픽스는 fastembed가 처리."""
+        return [list(map(float, v)) for v in self._get_model().passage_embed(texts)]
+
+    def embed_queries(self, texts: list[str]) -> list[list[float]]:
+        """질의(query) 임베딩 — 문서와 다른 프리픽스가 필요한 모델 대응."""
+        return [list(map(float, v)) for v in self._get_model().query_embed(texts)]
 
 
 def default_embedder() -> Embedder:
