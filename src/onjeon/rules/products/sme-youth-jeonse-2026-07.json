@@ -1,9 +1,11 @@
 {
   "rule_id": "sme-youth-jeonse-2026-07",
-  "product_name": "중소기업취업청년 전월세보증금대출 [확인: 정식 명칭·요강]",
+  "product_name": "중소기업취업청년 전월세보증금대출",
   "version": "2026-07 기준",
+  "verified_at": "2026-07-18",
+  "verify_note": "2026-07-18 웹 검증: 외벌이 연소득 3,500만 이하(부부합산 5,000만), 보증금 2억 이하(전용 85㎡), 한도 1억, 금리 1.2%, 만 34세(군복무 시 최대 39세). ⚠️ 일부 은행 '2025-01-01 판매중지' 표기 — 판매 지속 여부 [확인] 필요, 중소기업 재직 요건은 MVP 미수집 항목",
   "source": {
-    "url": "https://nhuf.molit.go.kr [확인: 공고 원문 URL]",
+    "url": "https://youth.seoul.go.kr/infoData/youthPlcyInfo/view.do?plcyBizId=20240104005400100002",
     "clause_refs": ["대출대상 제1~3호"]
   },
   "criteria": [

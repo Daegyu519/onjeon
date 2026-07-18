@@ -62,11 +62,11 @@ class TestVerticalSlice:
         assert report["jeonse"]["e_loss"] > 0
 
     def test_lgd_matches_hand_calculation(self, persona, villa, officetel, model):
-        # 1.5억×0.78 = 1.17억 − 선순위 0.72억 → 회수 0.45억 → LGD 0.625
+        # 1.5억×0.74(서울 빌라 2026 상반기 실측) − 선순위 0.72억 → 회수 0.39억 → LGD 0.675
         report = run_comparison(
             persona=persona, villa_doc=villa, officetel_doc=officetel, model=model
         )
-        assert report["jeonse"]["lgd"] == pytest.approx(0.625)
+        assert report["jeonse"]["lgd"] == pytest.approx(0.675)
 
     def test_every_number_has_citations(self, persona, villa, officetel, model):
         report = run_comparison(
