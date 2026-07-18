@@ -50,22 +50,38 @@ class WhatIfAgent:
         self.max_steps = max_steps
 
     def ask(self, question: str) -> dict:
-        """자연어 what-if 질문 → 엔진 재실행 → 해석. 결과에 tool 기록 포함."""
+        """자연어 what-if 질문 → 엔진 재실행 → 해석.
+
+        complete()는 무상태이므로 모든 후속 프롬프트에 사용자 질문을 다시 싣는다.
+        엔진 미호출 final은 한 번 교정 재요청하고, 그래도 미호출이면
+        grounded=False로 표시해 호출측이 '엔진 근거 없음'을 알 수 있게 한다.
+        """
         prompt = (
             f"기본 파라미터: {json.dumps(self.base_params, ensure_ascii=False)}\n"
             f"사용자 질문: {question}"
         )
         tool_calls: list[dict] = []
         tool_results: list[dict] = []
+        corrected = False
 
         for _ in range(self.max_steps):
             action = _parse_action(self.llm.complete(prompt, system=SYSTEM_PROMPT))
 
             if action.get("action") == "final":
+                if not tool_results and not corrected:
+                    corrected = True
+                    prompt = (
+                        f"사용자 질문: {question}\n"
+                        "아직 계산 엔진을 호출하지 않았다. 너는 직접 계산할 수 없다 — "
+                        "먼저 run_comparison tool을 호출해 엔진 결과를 얻은 뒤에만 "
+                        "final을 반환하라."
+                    )
+                    continue
                 return {
                     "answer": action.get("answer", ""),
                     "tool_calls": tool_calls,
                     "tool_results": tool_results,
+                    "grounded": bool(tool_results),
                 }
 
             if action.get("action") == "call_tool":
@@ -78,6 +94,7 @@ class WhatIfAgent:
                 tool_results.append(result)
                 prompt = (
                     f"엔진 결과: {json.dumps(result, ensure_ascii=False)}\n"
+                    f"사용자 질문: {question}\n"
                     "이 결과만 근거로 사용자 질문에 답하라. "
                     "숫자는 엔진 결과에서 그대로 인용하라."
                 )

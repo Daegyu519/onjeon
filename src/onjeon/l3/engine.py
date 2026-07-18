@@ -31,7 +31,8 @@ def wolse_tax_credit(annual_rent: int, annual_income: int, tax_rules: dict) -> i
     """월세 세액공제액 (조특법 §95-2 — 구간·한도는 룰 DB에서)."""
     credit_rule = tax_rules["wolse_tax_credit"]
     base = min(annual_rent, credit_rule["annual_rent_cap_krw"])
-    for bracket in credit_rule["brackets"]:
+    # L0가 공급한 룰의 구간 순서를 신뢰하지 않는다 — 항상 소득 상한 오름차순으로 매칭
+    for bracket in sorted(credit_rule["brackets"], key=lambda b: b["max_income_krw"]):
         if annual_income <= bracket["max_income_krw"]:
             return round(base * bracket["rate"])
     return 0
@@ -90,6 +91,8 @@ def lgd(
 
     보증보험 가입 매물은 0.0 (MVP 가정 — [확인] 부분 보전 조건 반영 필요).
     """
+    if deposit <= 0:
+        raise ValueError("deposit은 1원 이상이어야 한다")
     if insured:
         return 0.0
     expected_auction = market_price * auction_rate

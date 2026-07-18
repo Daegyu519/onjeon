@@ -68,7 +68,9 @@ REGISTER_SCHEMA = {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["rank", "type", "max_claim_krw", "set_date", "cancelled", "source_loc"],
+                        # max_claim_krw·set_date는 선택 — 전세권·임차권 등 채권최고액이
+                        # 없는 을구 등기가 실존하며, 파서 지침은 "모르면 비워라"다.
+                        "required": ["rank", "type", "cancelled", "source_loc"],
                         "properties": {
                             "rank": {"type": "integer"},
                             "type": {"type": "string"},
@@ -118,7 +120,7 @@ def senior_claims(register: dict) -> int:
     채권최고액 기준(실채권 아님)의 보수적 추정 — 한계는 리포트에 명시한다.
     """
     liens = sum(
-        entry["max_claim_krw"]
+        entry.get("max_claim_krw") or 0
         for entry in register["eul_section"]
         if not entry["cancelled"]
     )

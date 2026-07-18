@@ -15,8 +15,14 @@ from onjeon.rules_io import load_rules
 def _auction_rate(doc: dict, auction_rates: dict) -> float:
     region = doc["property"].get("region", "default")
     building = doc["property"]["building_type"]
-    table = auction_rates["rates"].get(region, auction_rates["rates"]["default"])
-    return table[building]
+    rates = auction_rates["rates"]
+    region_table = rates.get(region, rates["default"])
+    if building in region_table:
+        return region_table[building]
+    if building in rates["default"]:
+        return rates["default"][building]
+    # 테이블에 없는 유형은 가장 보수적(최저) 낙찰가율로 — LGD 과소평가 방지
+    return min(rates["default"].values())
 
 
 def _features(doc: dict, deposit: int, auction_rate: float) -> dict:

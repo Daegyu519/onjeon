@@ -79,6 +79,18 @@ class TestWolseTaxCredit:
         # 연 월세 1,200만 → 한도 1,000만에 17%
         assert wolse_tax_credit(12_000_000, 36_000_000, TAX_RULES) == 1_700_000
 
+    def test_bracket_order_independent(self):
+        # L0가 생성한 룰이 내림차순이어도 결과가 같아야 한다
+        unsorted_rules = {
+            **TAX_RULES,
+            "wolse_tax_credit": {
+                **TAX_RULES["wolse_tax_credit"],
+                "brackets": list(reversed(TAX_RULES["wolse_tax_credit"]["brackets"])),
+            },
+        }
+        assert wolse_tax_credit(7_800_000, 36_000_000, unsorted_rules) == 1_326_000
+        assert wolse_tax_credit(7_800_000, 60_000_000, unsorted_rules) == 1_170_000
+
 
 class TestWolse:
     def test_persona_safe_officetel(self):
@@ -167,6 +179,15 @@ class TestLGD:
             deposit=120_000_000,
             insured=True,
         ) == pytest.approx(0.0)
+
+    def test_zero_deposit_raises(self):
+        with pytest.raises(ValueError):
+            lgd(
+                market_price=150_000_000,
+                auction_rate=0.78,
+                senior_claims=0,
+                deposit=0,
+            )
 
 
 class TestExpectedLoss:

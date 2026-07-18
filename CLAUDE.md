@@ -65,7 +65,10 @@ idea/
 │   ├── design.md        ← 상세 설계도: 모듈 스펙, 수식, 데이터 스키마, 화면
 │   └── workflow.md      ← 4주 MVP 워크플로우, 역할, 데모 시나리오
 ├── src/onjeon/
-│   ├── llm.py           ← LLMClient / MockLLM / AnthropicLLM
+│   ├── llm.py           ← LLMClient / MockLLM / GeminiLLM / AnthropicLLM
+│   ├── config.py        ← .env 로더 (키: .env.example 참조)
+│   ├── display.py       ← 표시 계층 (만원 변환·인용 라벨은 여기서만)
+│   ├── data_pipeline/   ← 데이터 수집 (실거래가 API, 낙찰가율 룰 생성기)
 │   ├── compare.py       ← 전 레이어 오케스트레이터 (UI·L4 공용, LLM 없음)
 │   ├── rules_io.py      ← 버전 태그 룰 DB 로더
 │   ├── l0/rule_pipeline.py  ← 공고 → 룰 JSON (추출/검증 LLM 분리 강제)

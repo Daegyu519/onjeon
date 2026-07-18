@@ -33,6 +33,7 @@
 | [docs/architecture.md](docs/architecture.md) | L0~L4 5계층 아키텍처 | "시스템이 왜 이렇게 나뉘는가?" |
 | [docs/design.md](docs/design.md) | 상세 설계도 — 모듈 스펙, 수식, 데이터 스키마, 화면 | "정확히 무엇을 어떻게 만드는가?" |
 | [docs/workflow.md](docs/workflow.md) | 4주 MVP 계획, 역할 분담, 데모 시나리오 | "누가 언제 무엇을 하는가?" |
+| [docs/data-pipeline.md](docs/data-pipeline.md) | 데이터 수집 방향 — 소스 5종, 갱신 절차, 사용법 | "데이터는 어디서 어떻게 채우는가?" |
 
 ## 실행 방법
 
@@ -41,7 +42,10 @@
 uv venv --python 3.12 .venv
 uv pip install -p .venv -e ".[dev,llm]"
 
-# 전체 테스트 (81 tests)
+# API 키 설정 (선택 — 없어도 오프라인 데모 동작)
+cp .env.example .env   # GEMINI_API_KEY, MOLIT_API_KEY 등 입력
+
+# 전체 테스트
 .venv/bin/python -m pytest
 
 # 데모 실행 → http://localhost:8501

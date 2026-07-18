@@ -61,6 +61,29 @@ class TestWhatIfAgent:
         WhatIfAgent(llm, BASE_PARAMS, tools).ask("연봉 500만원 오르면?")
         assert "6874000" in llm.calls[1]["prompt"].replace(",", "")
 
+    def test_followup_prompt_keeps_user_question(self, tool_recorder):
+        # complete()는 무상태 — 후속 프롬프트에 질문이 없으면 LLM은 무엇에 답할지 모른다
+        _, tools = tool_recorder
+        llm = MockLLM([TOOL_CALL, FINAL])
+        WhatIfAgent(llm, BASE_PARAMS, tools).ask("연봉 500만원 오르면?")
+        assert "연봉 500만원 오르면?" in llm.calls[1]["prompt"]
+
+    def test_direct_final_gets_corrective_retry(self, tool_recorder):
+        # 엔진 미호출 final은 한 번 교정 재요청 — '계산 금지' 원칙의 구조적 강제
+        calls, tools = tool_recorder
+        llm = MockLLM([FINAL, TOOL_CALL, FINAL])
+        result = WhatIfAgent(llm, BASE_PARAMS, tools).ask("연봉 500만원 오르면?")
+        assert result["grounded"] is True
+        assert len(result["tool_results"]) == 1
+        assert "tool" in llm.calls[1]["prompt"]  # 교정 프롬프트가 tool 호출을 지시
+
+    def test_persistent_direct_final_marked_ungrounded(self, tool_recorder):
+        _, tools = tool_recorder
+        llm = MockLLM([FINAL, FINAL])
+        result = WhatIfAgent(llm, BASE_PARAMS, tools).ask("질문")
+        assert result["grounded"] is False
+        assert result["tool_results"] == []
+
     def test_unknown_tool_raises(self, tool_recorder):
         _, tools = tool_recorder
         bad_call = json.dumps({"action": "call_tool", "tool": "no_such", "params_patch": {}})

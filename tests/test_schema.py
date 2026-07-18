@@ -70,3 +70,29 @@ class TestSeniorClaims:
     def test_officetel_no_liens_is_zero(self, load_fixture):
         doc = load_fixture("register_safe_officetel.json")
         assert senior_claims(doc["register"]) == 0
+
+
+class TestAmountlessEulEntry:
+    """전세권·임차권 등 채권최고액이 없는 을구 등기 — 파서 지침('모르면 비워라')과 정합."""
+
+    def _doc_with_jeonse_right(self, load_fixture):
+        import copy
+
+        doc = copy.deepcopy(load_fixture("register_risky_villa.json"))
+        doc["register"]["eul_section"].append(
+            {
+                "rank": 2,
+                "type": "전세권설정",
+                "cancelled": False,
+                "source_loc": {"page": 2, "section": "을구", "entry_no": 4},
+            }
+        )
+        return doc
+
+    def test_gate_accepts_entry_without_amount(self, load_fixture):
+        doc = self._doc_with_jeonse_right(load_fixture)
+        assert validate_extraction(doc) == []
+
+    def test_senior_claims_counts_missing_amount_as_zero(self, load_fixture):
+        doc = self._doc_with_jeonse_right(load_fixture)
+        assert senior_claims(doc["register"]) == 72_000_000

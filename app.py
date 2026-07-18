@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -23,6 +24,8 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from onjeon.compare import run_comparison
+from onjeon.config import load_env
+from onjeon.display import citation_label, krw_man
 from onjeon.l0.rule_pipeline import pipeline as rule_pipeline
 from onjeon.l2.model import train
 from onjeon.l2.synth import generate
@@ -133,9 +136,20 @@ html, body, [class*="css"] {{
 """
 
 
-def krw_man(x: int | float) -> str:
-    """원 → 만원 표시 (표시 계층에서만 변환 — CLAUDE.md 컨벤션)."""
-    return f"{x / 10_000:,.0f}만원"
+load_env()  # .env → 환경변수 (이미 설정된 값은 유지)
+
+
+def _bridge_streamlit_secrets() -> None:
+    """Streamlit Cloud의 st.secrets를 환경변수로 브리지 (로컬엔 영향 없음)."""
+    try:
+        for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "ONJEON_MODEL", "MOLIT_API_KEY"):
+            if not os.environ.get(key) and key in st.secrets:
+                os.environ[key] = str(st.secrets[key])
+    except Exception:
+        pass  # secrets.toml 부재 등 — 키 없이도 데모는 동작해야 한다
+
+
+_bridge_streamlit_secrets()
 
 
 @st.cache_resource
@@ -274,9 +288,7 @@ with tab_compare:
     with right:
         st.markdown("##### 근거 — 원문 인용")
         citations_html = "".join(
-            f'<li><b>{c["type"]}</b> {krw_man(c["amount_krw"])} — '
-            f'<span class="loc">등기부 {c["section"]} {c["entry_no"]}번 · p.{c["page"]}</span></li>'
-            for c in report["jeonse"]["citations"]
+            f"<li>{citation_label(c)}</li>" for c in report["jeonse"]["citations"]
         )
         sources = report["sources"]
         st.markdown(

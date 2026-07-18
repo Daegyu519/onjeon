@@ -23,7 +23,8 @@ def generate(n: int = 1500, seed: int = 42) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     df = pd.DataFrame(
         {
-            "jeonse_ratio": rng.uniform(0.2, 1.0, n),
+            # 하한 0.0 — 월세 매물(보증금/시세 ≈ 0.05)도 학습 분포 안에 들어오도록
+            "jeonse_ratio": rng.uniform(0.0, 1.0, n),
             "lien_ratio": rng.uniform(0.0, 0.8, n),
             "is_villa": rng.integers(0, 2, n),
             "auction_rate": rng.uniform(0.6, 0.95, n),

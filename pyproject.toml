@@ -10,6 +10,8 @@ dependencies = [
     "streamlit>=1.38",
     "jsonschema>=4.23",
     "matplotlib>=3.9",
+    "python-dotenv>=1.0",
+    "requests>=2.32",
 ]
 
 [project.optional-dependencies]

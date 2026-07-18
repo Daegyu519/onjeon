@@ -102,6 +102,28 @@ class TestPipeline:
         assert result.approved is False
         assert any("불일치" in r or "검증" in r for r in result.reasons)
 
+    def test_malformed_rule_rejected_without_crash(self):
+        # 추출 LLM이 criteria 없는 JSON을 반환해도 크래시가 아니라 반영 거부여야 한다
+        result = pipeline(
+            "공고",
+            extract_llm=MockLLM([rule_response({"rule_id": "broken"})]),
+            verify_llm=MockLLM([VERIFY_OK]),
+        )
+        assert result.approved is False
+        assert any("스키마" in r for r in result.reasons)
+
+    def test_criterion_without_boundary_tests_rejected(self):
+        # 경계값 테스트가 없는 룰은 '통과'가 아니라 반영 거부 (CLAUDE.md 원칙 4)
+        rule = json.loads(json.dumps(GOOD_RULE))
+        del rule["criteria"][0]["boundary_tests"]
+        result = pipeline(
+            "공고",
+            extract_llm=MockLLM([rule_response(rule)]),
+            verify_llm=MockLLM([VERIFY_OK]),
+        )
+        assert result.approved is False
+        assert any("스키마" in r or "경계값" in r for r in result.reasons)
+
     def test_boundary_failure_rejected(self):
         bad = json.loads(json.dumps(GOOD_RULE))
         bad["criteria"][0]["boundary_tests"][0]["expect"] = False
