@@ -37,7 +37,7 @@ class TestProviderSelection:
 
     def test_gemini_default_model(self, monkeypatch):
         monkeypatch.delenv("ONJEON_MODEL", raising=False)
-        assert GeminiLLM().model == "gemini-2.5-flash"
+        assert GeminiLLM().model == "gemini-3.1-flash-lite"
 
     def test_gemini_model_env_override(self, monkeypatch):
         monkeypatch.setenv("ONJEON_MODEL", "gemini-2.5-pro")

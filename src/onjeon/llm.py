@@ -74,7 +74,7 @@ class GeminiLLM:
     """Google Gemini API 클라이언트 (GEMINI_API_KEY 또는 GOOGLE_API_KEY, lazy import)."""
 
     def __init__(self, model: str | None = None, max_tokens: int = 4096):
-        self.model = model or os.environ.get("ONJEON_MODEL", "gemini-2.5-flash")
+        self.model = model or os.environ.get("ONJEON_MODEL", "gemini-3.1-flash-lite")
         self.max_tokens = max_tokens
         self._client = None
 

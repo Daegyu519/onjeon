@@ -4,8 +4,8 @@
 API 키 없이(MockLLM 경로) 전 구간 데모 가능. ANTHROPIC_API_KEY가 있으면
 what-if·룰 추출이 실제 LLM으로 동작한다. 숫자는 전부 L2/L3에서 온다.
 
-디자인: 등기부 문서 세계관(잉크·서류·관인 인장) + 금융 신뢰 팔레트.
-모션은 절제 — press 피드백만, prefers-reduced-motion 존중.
+디자인: KB국민은행 컬러 팔레트 + Apple Liquid Glass(글래스모피즘) UI/UX.
+모션은 유체처럼 부드럽고 탄성있는 트랜지션(Emil Kowalski 스타일) 적용.
 """
 
 from __future__ import annotations
@@ -36,22 +36,23 @@ from onjeon.rag.documents import collect_documents
 from onjeon.rag.index import ClauseIndex
 from onjeon.rules_io import load_products, load_rules
 
-# ── 디자인 토큰 ────────────────────────────────────────────────────
-INK = "#1B2233"      # 본문·헤딩 잉크
-SLATE = "#5C6675"    # 보조 텍스트
-PAPER = "#F5F7FA"    # 서류 백색 배경
-CARD = "#FFFFFF"
-TRUST = "#2F4B7C"    # 명목비용 (신뢰 남색)
-RISK = "#C94F4E"     # 기대손실
-SEAL = "#C0392B"     # 관인 인장
-SAFE = "#2E7D64"     # 자격 충족
-ACCENT = "#FFB300"   # KB 옐로
+# ── 디자인 토큰 (KB국민은행 + Apple Glassmorphism) ─────────────────────
+INK = "#2B2A26"      # KB 텍스트 (Deep Brown/Gray)
+SLATE = "#7A766C"    # 보조 텍스트
+MUTED = "#A39F93"    # 축·미세 텍스트
+PAPER = "#F7F7F7"    # 베이스 배경 
+CARD = "rgba(255, 255, 255, 0.65)" # 글래스모피즘 베이스
+TRUST = "#FFCC00"    # KB Yellow — 명목비용·주요 강조
+RISK = "#FF5252"     # 기대손실·위험 (부드러운 Red)
+SAFE = "#00C853"     # 긍정
+ACCENT = "#FFD733"   # 최적 하이라이트 (KB Yellow Light)
+YELLOW_TINT = "rgba(255, 204, 0, 0.15)" # 노란색 글래스 틴트
 
 import matplotlib.font_manager as _fm
 
 for _font_path in _fm.findSystemFonts(fontpaths=["/usr/share/fonts/truetype/nanum"]):
-    _fm.fontManager.addfont(_font_path)  # Streamlit Cloud(Linux): packages.txt의 fonts-nanum
-matplotlib.rcParams["font.family"] = ["AppleGothic", "NanumGothic", "Malgun Gothic", "sans-serif"]
+    _fm.fontManager.addfont(_font_path)  # Streamlit Cloud(Linux)
+matplotlib.rcParams["font.family"] = ["Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"]
 matplotlib.rcParams["axes.unicode_minus"] = False
 
 FIXTURES = ROOT / "data" / "fixtures"
@@ -63,101 +64,156 @@ FEATURE_LABELS = {
     "auction_rate": "낙찰가율",
 }
 
+# ── Liquid Glass CSS 주입 ──────────────────────────────────────────
 CSS = f"""
 <style>
 :root {{
-  --ink: {INK}; --slate: {SLATE}; --paper: {PAPER}; --card: {CARD};
-  --trust: {TRUST}; --risk: {RISK}; --seal: {SEAL}; --safe: {SAFE}; --accent: {ACCENT};
+  --ink: {INK}; --slate: {SLATE}; --muted: {MUTED}; --paper: {PAPER}; 
+  --card: {CARD}; --primary: {TRUST}; --risk: {RISK}; --safe: {SAFE}; 
+  --accent: {ACCENT}; --tint: {YELLOW_TINT};
+  
+  /* Liquid / Glass 변수 */
+  --glass-blur: blur(24px);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --liquid-easing: cubic-bezier(0.175, 0.885, 0.32, 1.15); /* 탄성있는 텐션 */
 }}
+
+/* 전체 배경에 은은한 메쉬 그라데이션 부여 (글래스모피즘 극대화) */
+.stApp {{
+  background: radial-gradient(circle at 15% 10%, #FFFDF5 0%, #F5F7FA 50%, #FFF8E7 100%);
+  background-attachment: fixed;
+}}
+
 html, body, [class*="css"] {{
   font-family: "Pretendard", "Apple SD Gothic Neo", -apple-system, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }}
-/* 헤드라인: 큰 글자는 네거티브 트래킹, 타이트한 행간 */
+
+/* 히어로 카드 — Liquid Glass */
 .onj-hero {{
   background: var(--card);
-  border: 1px solid #E4E8EF;
-  border-left: 4px solid var(--accent);
-  border-radius: 14px;
-  padding: 1.4rem 1.6rem 1.2rem;
-  margin-bottom: 1.1rem;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 32px;
+  padding: 2.2rem 2.2rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 16px 40px rgba(43, 42, 38, 0.04), inset 0 1px 0 rgba(255,255,255,0.8);
   position: relative;
   overflow: hidden;
 }}
+
+/* 히어로 배경에 은은한 빛 효과 추가 */
+.onj-hero::before {{
+  content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(circle at 50% 50%, rgba(255,204,0,0.08) 0%, transparent 60%);
+  z-index: -1;
+}}
+
+.onj-eyebrow {{
+  font-size: 0.85rem; font-weight: 800; color: #D4A000;
+  letter-spacing: 0.02em; margin-bottom: 0.6rem;
+}}
 .onj-hero h2 {{
-  font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.02em;
-  font-weight: 800; color: var(--ink); margin: 0 0 0.35rem;
+  font-size: 1.7rem; line-height: 1.35; letter-spacing: -0.02em;
+  font-weight: 800; color: var(--ink); margin: 0 0 0.6rem;
 }}
-.onj-hero p {{ color: var(--slate); font-size: 0.92rem; margin: 0; }}
-.onj-hero .amount {{ color: var(--risk); font-weight: 700; }}
-
-/* 시그니처: 등기부 관인 인장 */
-.onj-seal {{
-  position: absolute; right: 1.4rem; top: 50%;
-  transform: translateY(-50%) rotate(-8deg);
-  width: 76px; height: 76px; border-radius: 50%;
-  border: 3px double var(--seal); color: var(--seal);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 1.05rem; letter-spacing: 0.1em;
-  opacity: 0.9;
-  mix-blend-mode: multiply;
+.onj-hero p {{ color: var(--slate); font-size: 1rem; margin: 0 0 1rem; }}
+.onj-hero .amount {{ 
+  color: var(--risk); font-weight: 800; 
+  background: linear-gradient(90deg, #FF5252, #FF2A2A);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }}
 
-/* 3안 카드 */
+/* 3안 옵션 카드 — 부드러운 호버 트랜지션 */
 .onj-option {{
-  background: var(--card); border: 1px solid #E4E8EF; border-radius: 12px;
-  padding: 0.95rem 1.1rem; height: 100%;
-  transition: transform 140ms ease-out, box-shadow 140ms ease-out;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 28px;
+  padding: 1.4rem 1.4rem; height: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+  transition: transform 0.4s var(--liquid-easing), box-shadow 0.4s ease;
 }}
-.onj-option:hover {{ transform: translateY(-2px); box-shadow: 0 6px 18px rgba(27,34,51,0.08); }}
-.onj-option .label {{ font-size: 0.82rem; color: var(--slate); letter-spacing: 0.02em; }}
+.onj-option:hover {{ 
+  transform: translateY(-6px) scale(1.01); 
+  box-shadow: 0 16px 40px rgba(255, 204, 0, 0.1); 
+}}
+.onj-option .label {{ font-size: 0.85rem; font-weight: 700; color: var(--slate); }}
 .onj-option .value {{
-  font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink);
-  line-height: 1.15;
+  font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--ink);
+  line-height: 1.2; margin-top: 0.2rem;
 }}
-.onj-option .eloss {{ font-size: 0.82rem; color: var(--risk); font-weight: 600; }}
-.onj-option.best {{ border: 1.5px solid var(--accent); background: #FFFDF4; }}
+.onj-option .eloss {{ font-size: 0.85rem; color: var(--risk); font-weight: 700; margin-top: 0.3rem; }}
+
+/* 최적(Best) 카드 — KB 그라데이션 강조 */
+.onj-option.best {{ 
+  background: linear-gradient(135deg, rgba(255,223,64,0.85) 0%, rgba(255,204,0,0.85) 100%);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 12px 32px rgba(255, 204, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.5);
+}}
+.onj-option.best .label {{ color: #7A6000; font-weight: 800; }}
+.onj-option.best .value {{ color: #2B2A26; }}
 
 /* 인용 리스트 */
-.onj-cite {{ font-size: 0.88rem; color: var(--ink); }}
-.onj-cite li {{ margin-bottom: 0.3rem; }}
-.onj-cite .loc {{
-  background: #EEF1F6; border-radius: 5px; padding: 0.05rem 0.4rem;
-  font-size: 0.8rem; color: var(--trust); font-weight: 600;
+.onj-cite {{ font-size: 0.95rem; color: var(--ink); padding-left: 1.2rem; }}
+.onj-cite li {{ margin-bottom: 0.45rem; }}
+.onj-cite .loc {{ color: var(--slate); font-size: 0.85rem; background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 6px; }}
+
+/* Liquid 버튼 디자인 */
+.stButton > button {{
+  background: linear-gradient(135deg, #FFDF40 0%, #FFCC00 100%) !important;
+  color: #2B2A26 !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  border-radius: 20px !important; /* 애플스러운 큰 라운드 */
+  font-weight: 800 !important;
+  padding: 0.6rem 1.2rem !important;
+  box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+  transition: all 0.3s var(--liquid-easing) !important;
+}}
+.stButton > button:hover {{ 
+  transform: translateY(-2px); 
+  box-shadow: 0 8px 20px rgba(255, 204, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.8) !important; 
+}}
+.stButton > button:active {{ 
+  transform: scale(0.93); /* 클릭 시 액체처럼 꾹 눌리는 효과 */
 }}
 
-/* 버튼: press 즉각 피드백 (Apple — pointer-down 반응) */
-.stButton > button {{ transition: transform 100ms ease-out; }}
-.stButton > button:active {{ transform: scale(0.97); }}
+/* Expander, Inputs 등에 Glass 효과 적용 */
+.stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {{
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.3s ease !important;
+}}
+.stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {{
+  background: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3) !important;
+  border-color: #FFCC00 !important;
+}}
 
 @media (prefers-reduced-motion: reduce) {{
-  .onj-option, .stButton > button {{ transition: none !important; }}
-  .onj-option:hover {{ transform: none; }}
+  .onj-option, .stButton > button, .onj-option:hover {{ transition: none !important; transform: none !important; }}
 }}
 </style>
 """
 
-
-load_env()  # .env → 환경변수 (이미 설정된 값은 유지)
-
+load_env()
 
 def _bridge_streamlit_secrets() -> None:
-    """Streamlit Cloud의 st.secrets를 환경변수로 브리지 (로컬엔 영향 없음)."""
     try:
         for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "ONJEON_MODEL", "MOLIT_API_KEY"):
             if not os.environ.get(key) and key in st.secrets:
                 os.environ[key] = str(st.secrets[key])
     except Exception:
-        pass  # secrets.toml 부재 등 — 키 없이도 데모는 동작해야 한다
-
+        pass 
 
 _bridge_streamlit_secrets()
-
 
 @st.cache_resource
 def risk_model():
     return train(generate(1500, seed=42))
-
 
 @st.cache_data
 def load_fixture(name: str):
@@ -166,25 +222,21 @@ def load_fixture(name: str):
         return json.loads(path.read_text(encoding="utf-8"))
     return path.read_text(encoding="utf-8")
 
-
 @st.cache_data
 def load_registers() -> dict:
-    """data/fixtures의 모든 매물(register_*.json)을 로드 — UI 선택지."""
     return {
         path.name: json.loads(path.read_text(encoding="utf-8"))
         for path in sorted(FIXTURES.glob("register_*.json"))
     }
 
-
 @st.cache_resource
 def clause_index() -> ClauseIndex:
-    """조항 색인 (Qdrant 임베디드 :memory:) — 부팅 시 룰 DB 전체 인입."""
     index = ClauseIndex()
     index.index_documents(collect_documents())
     return index
 
-
 def styled_fig(figsize):
+    """KB 스타일이 가미된 차트"""
     fig, ax = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor("none")
     ax.set_facecolor("none")
@@ -193,7 +245,6 @@ def styled_fig(figsize):
     ax.spines["bottom"].set_color("#D5DAE3")
     ax.tick_params(colors=SLATE, labelsize=9)
     return fig, ax
-
 
 st.set_page_config(page_title="온전(穩全)", page_icon="🏠", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
@@ -204,7 +255,7 @@ st.caption(
     "숫자는 결정론 엔진(L3)과 ML(L2)이, 해석·인용만 LLM이 담당합니다."
 )
 
-# ── 사이드바: 페르소나 ─────────────────────────────────────────────
+# ── 사이드바 ───────────────────────────────────────────────────────
 persona_default = load_fixture("persona_kim.json")
 with st.sidebar:
     st.header("👤 페르소나")
@@ -247,16 +298,16 @@ officetel = registers[officetel_name]
 model = risk_model()
 report = run_comparison(persona=persona, villa_doc=villa, officetel_doc=officetel, model=model)
 
-# ── 히어로: 결론 먼저, 관인 인장 ───────────────────────────────────
+# ── 히어로 ─────────────────────────────────────────────────────────
 best = report["best"]
 jeonse = report["jeonse"]
 gap_vs_wolse = report["jeonse"]["total"] - report["wolse"]["total"]
 st.markdown(
     f"""
 <div class="onj-hero">
+  <div class="onj-eyebrow">맞춤형 분석 결과</div>
   <h2>{persona['name']}님, 이 빌라 전세는 <span class="amount">기대손실 연 {krw_man(jeonse['e_loss'])}</span>을 반영하면<br/>월세보다 연 {krw_man(abs(gap_vs_wolse))} {'비쌉니다' if gap_vs_wolse > 0 else '쌉니다'}.</h2>
-  <p>보증금 미회수 위험을 원(₩)으로 환산해 세후 총비용에 더한 결과입니다. 근거는 아래에 전부 인용됩니다.</p>
-  <div class="onj-seal">{best}<br/>유리</div>
+  <p>보증금 미회수 위험을 원(₩)으로 환산해 세후 총비용에 더한 결과입니다. 하단에서 근거를 확인하세요.</p>
 </div>
 """,
     unsafe_allow_html=True,
@@ -281,8 +332,8 @@ with tab_compare:
             st.markdown(
                 f"""
 <div class="onj-option{' best' if is_best else ''}">
-  <div class="label">{option['label']}{' · 최적' if is_best else ''}</div>
-  <div class="value">{krw_man(option['total'])}<span style="font-size:0.85rem;color:var(--slate);font-weight:500;"> /년</span></div>
+  <div class="label">{option['label']}{' ✨ 최적 대안' if is_best else ''}</div>
+  <div class="value">{krw_man(option['total'])}<span style="font-size:1rem;color:{'#7A6000' if is_best else 'var(--slate)'};font-weight:600;"> /년</span></div>
   {eloss_html}
 </div>
 """,
@@ -295,8 +346,9 @@ with tab_compare:
     labels = [report[k]["label"] for k in keys]
     nominal = [report[k]["nominal"] / 10_000 for k in keys]
     e_loss = [report[k]["e_loss"] / 10_000 for k in keys]
-    ax.barh(labels, nominal, color=TRUST, label="명목비용", height=0.55)
-    ax.barh(labels, e_loss, left=nominal, color=RISK, label="기대손실 E[Loss]", height=0.55)
+    # 차트 컬러 KB Yellow 적용
+    ax.barh(labels, nominal, color=TRUST, edgecolor="none", label="명목비용", height=0.55)
+    ax.barh(labels, e_loss, left=nominal, color=RISK, edgecolor="none", label="기대손실 E[Loss]", height=0.55)
     ax.set_xlabel("연간 비용 (만원)", color=SLATE, fontsize=9)
     ax.invert_yaxis()
     ax.legend(loc="lower right", frameon=False, fontsize=9)
@@ -310,7 +362,7 @@ with tab_compare:
         values = [v for _, v in explain["contributions"]]
         fig2, ax2 = styled_fig((6, 2.2))
         ax2.barh(names, values, color=[RISK if v > 0 else TRUST for v in values], height=0.5)
-        ax2.axvline(0, color="#B9C0CC", linewidth=0.8)
+        ax2.axvline(0, color="#E2E5EB", linewidth=1)
         ax2.set_xlabel("logit 기여도 (+위험↑)", color=SLATE, fontsize=9)
         ax2.invert_yaxis()
         st.pyplot(fig2, clear_figure=True)
@@ -340,7 +392,7 @@ with tab_compare:
 
 # ── 탭 2: 대출 자격 ───────────────────────────────────────────────
 with tab_eligibility:
-    st.subheader("정책상품 자격 판정 — 미자격이면 '왜, 얼마나'까지")
+    st.subheader("정책상품 자격 판정")
     user = {
         "age": persona["age"],
         "annual_income_krw": persona["annual_income_krw"],
@@ -349,6 +401,7 @@ with tab_eligibility:
     }
     for product in load_products():
         result = evaluate(user, product)
+        # st.container 자체는 스타일링 한계가 있으나 CSS로 투명도를 조정받습니다.
         with st.container(border=True):
             if result["eligible"]:
                 st.markdown(f"✅ **{result['product_name']}** — 자격 충족 ({result['version']})")
@@ -393,7 +446,6 @@ with tab_whatif:
             with st.expander("엔진 호출 기록 (숫자의 출처)"):
                 st.json({"calls": result["tool_calls"], "results": result["tool_results"]})
         else:
-            # 오프라인 데모: LLM 없이 결정론 재실행 — 시나리오 고정 (연봉 +500만)
             patched = copy.deepcopy(persona)
             patched["annual_income_krw"] += 5_000_000
             before = comparison_tool(persona)
@@ -465,13 +517,13 @@ with tab_l0:
             added = clause_index().index_rule(result.rule)
             st.caption(f"⚡ 조항 색인 갱신: {added}건 — '조항 검색' 탭에서 즉시 인용 가능합니다.")
 
-# ── 탭 5: 조항 검색 (Vector DB — Qdrant) ──────────────────────────
+# ── 탭 5: 조항 검색 ───────────────────────────────────────────────
 with tab_rag:
     st.subheader("조항 단위 검색 — 룰 DB·세제·공고를 근거 그대로 인용")
     index = clause_index()
     st.caption(
         f"Qdrant 임베디드(비용 0) · 임베더 {type(index.embedder).__name__} · "
-        f"색인 {index.count()}건 · 판정은 결정론 룰엔진이 하고, 검색은 인용 전용입니다."
+        f"색인 {index.count()}건"
     )
     rag_query = st.text_input(
         "질문/키워드", placeholder="예: 연소득 기준이 얼마인가요? / 월세 세액공제"
