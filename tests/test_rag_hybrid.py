@@ -80,6 +80,14 @@ class TestDimensionMigration:
         migrated.client.close()
 
 
+class TestEmbedderEnvFallback:
+    def test_empty_env_embed_model_falls_back_to_default(self, monkeypatch):
+        from onjeon.rag.embedder import FastEmbedEmbedder
+
+        monkeypatch.setenv("ONJEON_EMBED_MODEL", "")
+        assert FastEmbedEmbedder().model_name == FastEmbedEmbedder.DEFAULT_MODEL
+
+
 class TestReranker:
     def test_noop_truncates_only(self):
         results = [{"score": 0.9, "text": "a", "payload": {}}, {"score": 0.8, "text": "b", "payload": {}}]

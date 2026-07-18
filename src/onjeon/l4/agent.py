@@ -63,6 +63,7 @@ class WhatIfAgent:
         tool_calls: list[dict] = []
         tool_results: list[dict] = []
         corrected = False
+        self._last_signature: tuple | None = None
 
         for _ in range(self.max_steps):
             action = _parse_action(self.llm.complete(prompt, system=SYSTEM_PROMPT))
@@ -89,14 +90,26 @@ class WhatIfAgent:
                 if tool_name not in self.tools:
                     raise ValueError(f"등록되지 않은 tool: {tool_name!r}")
                 params = {**self.base_params, **action.get("params_patch", {})}
+                signature = (tool_name, json.dumps(params, ensure_ascii=False, sort_keys=True))
+                if tool_calls and signature == self._last_signature:
+                    # 실 LLM이 동일 호출을 반복하는 사고 방지 — 재실행 없이 final 강제
+                    prompt = (
+                        f"이미 실행한 엔진 결과: {json.dumps(tool_results[-1], ensure_ascii=False)}\n"
+                        f"사용자 질문: {question}\n"
+                        '같은 호출을 반복하지 마라. 다음 응답은 반드시 '
+                        '{"action": "final", "answer": "..."} JSON이어야 한다.'
+                    )
+                    continue
                 result = self.tools[tool_name](params)
                 tool_calls.append({"tool": tool_name, "params": params})
                 tool_results.append(result)
+                self._last_signature = signature
                 prompt = (
                     f"엔진 결과: {json.dumps(result, ensure_ascii=False)}\n"
                     f"사용자 질문: {question}\n"
-                    "이 결과만 근거로 사용자 질문에 답하라. "
-                    "숫자는 엔진 결과에서 그대로 인용하라."
+                    "이 결과만 근거로 사용자 질문에 답하라. 숫자는 엔진 결과에서 "
+                    '그대로 인용하고, 다음 응답은 반드시 '
+                    '{"action": "final", "answer": "..."} JSON 형식으로만 반환하라.'
                 )
                 continue
 

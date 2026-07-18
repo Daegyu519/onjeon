@@ -159,6 +159,24 @@ class TestFetchTradesRetry:
             self._fetch(_FlakyHTTP([_http_error(500)]))
         assert any(rec.levelno == logging.WARNING for rec in caplog.records)
 
+    def test_http_error_message_does_not_leak_service_key(self):
+        # requests의 HTTPError는 URL(serviceKey 포함)을 담는다 — 마스킹 필수
+        class _Resp:
+            status_code = 401
+
+        def leaky_get(url, params=None, timeout=None):
+            raise requests.HTTPError(
+                f"401 Unauthorized for url: {url}?serviceKey={params['serviceKey']}",
+                response=_Resp(),
+            )
+
+        with pytest.raises(requests.HTTPError) as excinfo:
+            fetch_trades(
+                "11620", "202606", service_key="super-secret-key",
+                http_get=leaky_get, retry_wait=wait_none(),
+            )
+        assert "super-secret-key" not in str(excinfo.value)
+
 
 class TestAuctionRatesBuilder:
     ROWS = [

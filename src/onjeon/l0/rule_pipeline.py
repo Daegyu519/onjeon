@@ -25,6 +25,9 @@ EXTRACT_PROMPT_TEMPLATE = """다음 정책 공고에서 자격요건을 JSON 룰
 2. 각 조건마다 경계값 테스트(boundary_tests)를 생성하라
    (예: "만 34세 이하" → 34는 통과, 35는 탈락).
 3. 나이·금액은 정수로. 확실하지 않은 항목은 만들지 마라.
+4. 수치 범위(예: "만 19세 이상 34세 이하")는 반드시 두 개의 조건으로 분리하라:
+   {{"op": ">=", "value": 19}}와 {{"op": "<=", "value": 34}}.
+   "in"은 문자열 열거(예: 지역 목록)에만 쓴다 — 수치 리스트에 쓰면 거부된다.
 
 출력 스키마:
 {{
@@ -92,11 +95,28 @@ _RULE_VALIDATOR = Draft202012Validator(RULE_SCHEMA)
 
 
 def validate_rule(rule: dict) -> list[str]:
-    """추출 룰을 스키마에 대조한다. 빈 목록 = 통과."""
-    return [
+    """추출 룰을 스키마에 대조한다. 빈 목록 = 통과.
+
+    스키마 외 결정론 가드: op 'in' + 수치 리스트 조합 금지. 실 LLM이 나이
+    '범위'(19~34)를 in [19, 34]로 추출한 사례가 있는데, in은 집합 소속이라
+    내부값(26)이 탈락한다 — 경계값 테스트(19·34·35)로는 못 잡는 오독이다.
+    """
+    errors = [
         f"{'/'.join(str(p) for p in error.absolute_path) or '<root>'}: {error.message}"
         for error in _RULE_VALIDATOR.iter_errors(rule)
     ]
+    for i, criterion in enumerate(rule.get("criteria", [])):
+        value = criterion.get("value")
+        if (
+            criterion.get("op") == "in"
+            and isinstance(value, list)
+            and any(isinstance(v, (int, float)) and not isinstance(v, bool) for v in value)
+        ):
+            errors.append(
+                f"criteria/{i}: op 'in'에 수치 리스트 {value!r} — 수치 범위는 "
+                "'>= 최소'와 '<= 최대' 두 조건으로 분리하라 (소속/범위 오독 방지)"
+            )
+    return errors
 
 
 def _parse_json(text: str) -> dict:

@@ -124,6 +124,25 @@ class TestPipeline:
         assert result.approved is False
         assert any("스키마" in r or "경계값" in r for r in result.reasons)
 
+    def test_numeric_membership_in_op_rejected(self):
+        # 실 LLM이 나이 '범위'를 in [19, 34]로 추출한 실사고 — 소속 연산 오독은
+        # 경계값 테스트(19·34·35)로 못 잡으므로 결정론 가드로 반영을 거부한다
+        rule = json.loads(json.dumps(GOOD_RULE))
+        rule["criteria"][0] = {
+            "field": "age", "op": "in", "value": [19, 34], "clause": "제1호",
+            "boundary_tests": [
+                {"input": 19, "expect": True},
+                {"input": 35, "expect": False},
+            ],
+        }
+        result = pipeline(
+            "공고",
+            extract_llm=MockLLM([rule_response(rule)]),
+            verify_llm=MockLLM([VERIFY_OK]),
+        )
+        assert result.approved is False
+        assert any("범위" in r for r in result.reasons)
+
     def test_boundary_failure_rejected(self):
         bad = json.loads(json.dumps(GOOD_RULE))
         bad["criteria"][0]["boundary_tests"][0]["expect"] = False

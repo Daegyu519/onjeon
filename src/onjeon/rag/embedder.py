@@ -74,7 +74,8 @@ class FastEmbedEmbedder:
     DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
     def __init__(self, model_name: str | None = None):
-        self.model_name = model_name or os.environ.get("ONJEON_EMBED_MODEL", self.DEFAULT_MODEL)
+        # 빈 문자열 env는 미설정으로 취급 — or 체인 사용
+        self.model_name = model_name or os.environ.get("ONJEON_EMBED_MODEL") or self.DEFAULT_MODEL
         self.dim = self._resolve_dim(self.model_name)
         self._model = None
 

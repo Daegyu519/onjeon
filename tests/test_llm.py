@@ -43,6 +43,12 @@ class TestProviderSelection:
         monkeypatch.setenv("ONJEON_MODEL", "gemini-2.5-pro")
         assert GeminiLLM().model == "gemini-2.5-pro"
 
+    def test_empty_env_model_falls_back_to_default(self, monkeypatch):
+        # .env의 'ONJEON_MODEL=' 빈 값은 '미설정'으로 취급해야 한다 (실사고 사례)
+        monkeypatch.setenv("ONJEON_MODEL", "")
+        assert GeminiLLM().model == "gemini-3.1-flash-lite"
+        assert AnthropicLLM().model == "claude-sonnet-5"
+
 
 class TestMockLLM:
     def test_returns_responses_in_order(self):

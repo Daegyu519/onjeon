@@ -114,17 +114,23 @@ def fetch_trades(
         raise ValueError("MOLIT_API_KEY가 없다 — .env에 공공데이터포털 서비스키를 설정하라")
 
     def _request():
-        response = http_get(
-            endpoint,
-            params={
-                "serviceKey": key,
-                "LAWD_CD": lawd_cd,
-                "DEAL_YMD": deal_ym,
-                "numOfRows": "1000",
-            },
-            timeout=15,
-        )
-        response.raise_for_status()
+        try:
+            response = http_get(
+                endpoint,
+                params={
+                    "serviceKey": key,
+                    "LAWD_CD": lawd_cd,
+                    "DEAL_YMD": deal_ym,
+                    "numOfRows": "1000",
+                },
+                timeout=15,
+            )
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            # requests 예외 메시지엔 URL(serviceKey 포함)이 들어간다 — 키 마스킹.
+            # 같은 타입으로 재던져 재시도 판별(_is_retryable)을 보존한다.
+            sanitized = str(exc).replace(key, "***")
+            raise type(exc)(sanitized, response=getattr(exc, "response", None)) from None
         return response
 
     retryer = Retrying(

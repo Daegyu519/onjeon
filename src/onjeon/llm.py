@@ -33,7 +33,8 @@ class AnthropicLLM:
     """Anthropic Claude API 클라이언트 (ANTHROPIC_API_KEY 필요, lazy import)."""
 
     def __init__(self, model: str | None = None, max_tokens: int = 4096):
-        self.model = model or os.environ.get("ONJEON_MODEL", "claude-sonnet-5")
+        # 빈 문자열(.env의 'ONJEON_MODEL=')은 미설정으로 취급 — or 체인 사용
+        self.model = model or os.environ.get("ONJEON_MODEL") or "claude-sonnet-5"
         self.max_tokens = max_tokens
         self._client = None
 
@@ -74,7 +75,8 @@ class GeminiLLM:
     """Google Gemini API 클라이언트 (GEMINI_API_KEY 또는 GOOGLE_API_KEY, lazy import)."""
 
     def __init__(self, model: str | None = None, max_tokens: int = 4096):
-        self.model = model or os.environ.get("ONJEON_MODEL", "gemini-3.1-flash-lite")
+        # 빈 문자열(.env의 'ONJEON_MODEL=')은 미설정으로 취급 — or 체인 사용
+        self.model = model or os.environ.get("ONJEON_MODEL") or "gemini-3.1-flash-lite"
         self.max_tokens = max_tokens
         self._client = None
 

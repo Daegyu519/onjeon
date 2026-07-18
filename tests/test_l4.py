@@ -84,6 +84,22 @@ class TestWhatIfAgent:
         assert result["grounded"] is False
         assert result["tool_results"] == []
 
+    def test_post_tool_prompt_demands_final_format(self, tool_recorder):
+        # 실 Gemini가 tool을 무한 반복한 실사고 — 결과 수신 후엔 final 형식을 명시 요구
+        _, tools = tool_recorder
+        llm = MockLLM([TOOL_CALL, FINAL])
+        WhatIfAgent(llm, BASE_PARAMS, tools).ask("연봉 500만원 오르면?")
+        assert '"final"' in llm.calls[1]["prompt"]
+
+    def test_duplicate_tool_call_not_reexecuted(self, tool_recorder):
+        # 동일 (tool, params) 반복 호출은 재실행하지 않고 final을 강제한다
+        calls, tools = tool_recorder
+        llm = MockLLM([TOOL_CALL, TOOL_CALL, FINAL])
+        result = WhatIfAgent(llm, BASE_PARAMS, tools).ask("연봉 500만원 오르면?")
+        assert len(calls) == 1  # 엔진은 한 번만 실행
+        assert result["grounded"] is True
+        assert "final" in llm.calls[2]["prompt"]
+
     def test_unknown_tool_raises(self, tool_recorder):
         _, tools = tool_recorder
         bad_call = json.dumps({"action": "call_tool", "tool": "no_such", "params_patch": {}})
