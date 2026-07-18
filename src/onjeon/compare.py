@@ -38,7 +38,12 @@ def _features(doc: dict, deposit: int, auction_rate: float) -> dict:
 def _citations(doc: dict) -> list[dict]:
     register = doc["register"]
     return [
-        entry["source_loc"] | {"type": entry["type"], "amount_krw": entry.get("max_claim_krw")}
+        entry["source_loc"]
+        | {
+            "type": entry["type"],
+            "amount_krw": entry.get("max_claim_krw"),
+            "cancelled": entry.get("cancelled", False),
+        }
         for section in ("gap_section", "eul_section")
         for entry in register[section]
     ]

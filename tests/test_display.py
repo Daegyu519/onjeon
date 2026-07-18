@@ -21,6 +21,14 @@ class TestCitationLabel:
         assert "7,200만원" in label
         assert "을구 3번" in label
 
+    def test_cancelled_entry_is_labelled(self):
+        # 말소된 등기는 위험 계산에서 빠지지만, 인용 목록에서는 '말소' 표시로 구분
+        label = citation_label(
+            {"type": "근저당권설정", "amount_krw": 84_000_000, "cancelled": True,
+             "section": "을구", "entry_no": 3, "page": 3}
+        )
+        assert "말소" in label
+
     def test_gap_entry_without_amount_no_crash(self):
         # 갑구(압류·가압류)는 금액이 없다 — None이어도 죽지 않고 'None'도 노출 금지
         label = citation_label(

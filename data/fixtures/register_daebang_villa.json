@@ -1,0 +1,30 @@
+{
+  "property": {
+    "address": "서울특별시 동작구 대방동 391-12 해온하우스 202호",
+    "building_type": "빌라",
+    "region": "동작구",
+    "market_price_krw": 260000000,
+    "price_source": { "api": "국토부 실거래가", "queried_at": "2026-07-15" }
+  },
+  "register": {
+    "title_section": { "owner": "박○영", "ownership_changes": [] },
+    "gap_section": [],
+    "eul_section": [
+      {
+        "rank": 1,
+        "type": "근저당권설정",
+        "max_claim_krw": 60000000,
+        "set_date": "2017-09-01",
+        "cancelled": true,
+        "source_loc": { "page": 2, "section": "을구", "entry_no": 2 }
+      }
+    ],
+    "senior_lease_deposits_krw": 0
+  },
+  "offer": {
+    "jeonse_deposit_krw": 150000000,
+    "sale_price_krw": 260000000,
+    "insured": false,
+    "note": "전세가율 58%, 근저당 전부 말소 — 전세가 유리하게 나오는 안전 매물 (가상 데이터, 동작구는 낙찰가율 default 폴백 경로)"
+  }
+}

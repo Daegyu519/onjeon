@@ -1,0 +1,21 @@
+{
+  "property": {
+    "address": "서울특별시 관악구 봉천동 862-1 관악센트럴타워 1204호",
+    "building_type": "오피스텔",
+    "region": "관악구",
+    "market_price_krw": 210000000,
+    "price_source": { "api": "국토부 실거래가", "queried_at": "2026-07-15" }
+  },
+  "register": {
+    "title_section": { "owner": "이○진", "ownership_changes": [] },
+    "gap_section": [],
+    "eul_section": [],
+    "senior_lease_deposits_krw": 0
+  },
+  "offer": {
+    "wolse_deposit_krw": 20000000,
+    "monthly_rent_krw": 700000,
+    "insured": false,
+    "note": "보증금 2,000만/월세 70만 — 실사용 시나리오형 월세 대안 매물 (가상 데이터)"
+  }
+}

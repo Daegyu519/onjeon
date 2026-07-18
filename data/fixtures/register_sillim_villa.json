@@ -1,0 +1,46 @@
+{
+  "property": {
+    "address": "서울특별시 관악구 신림동 1423-7 세광빌 401호",
+    "building_type": "빌라",
+    "region": "관악구",
+    "market_price_krw": 185000000,
+    "price_source": { "api": "국토부 실거래가", "queried_at": "2026-07-15" }
+  },
+  "register": {
+    "title_section": { "owner": "김○철", "ownership_changes": [] },
+    "gap_section": [
+      {
+        "rank": 1,
+        "type": "가압류",
+        "date": "2024-11-20",
+        "cancelled": false,
+        "source_loc": { "page": 2, "section": "갑구", "entry_no": 7 }
+      }
+    ],
+    "eul_section": [
+      {
+        "rank": 1,
+        "type": "근저당권설정",
+        "max_claim_krw": 84000000,
+        "set_date": "2019-06-03",
+        "cancelled": true,
+        "source_loc": { "page": 3, "section": "을구", "entry_no": 3 }
+      },
+      {
+        "rank": 2,
+        "type": "근저당권설정",
+        "max_claim_krw": 156000000,
+        "set_date": "2021-04-12",
+        "cancelled": false,
+        "source_loc": { "page": 3, "section": "을구", "entry_no": 5 }
+      }
+    ],
+    "senior_lease_deposits_krw": 0
+  },
+  "offer": {
+    "jeonse_deposit_krw": 155000000,
+    "sale_price_krw": 185000000,
+    "insured": false,
+    "note": "전세가율 84% + 미말소 근저당 1.56억 + 가압류 — 실사용 시나리오형 깡통전세 위험 매물 (가상 데이터)"
+  }
+}

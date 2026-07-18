@@ -32,6 +32,8 @@ from onjeon.l2.synth import generate
 from onjeon.l3.eligibility import evaluate
 from onjeon.l4.agent import WhatIfAgent
 from onjeon.llm import MockLLM, default_llm, make_llm
+from onjeon.rag.documents import collect_documents
+from onjeon.rag.index import ClauseIndex
 from onjeon.rules_io import load_products, load_rules
 
 # ── 디자인 토큰 ────────────────────────────────────────────────────
@@ -165,6 +167,23 @@ def load_fixture(name: str):
     return path.read_text(encoding="utf-8")
 
 
+@st.cache_data
+def load_registers() -> dict:
+    """data/fixtures의 모든 매물(register_*.json)을 로드 — UI 선택지."""
+    return {
+        path.name: json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(FIXTURES.glob("register_*.json"))
+    }
+
+
+@st.cache_resource
+def clause_index() -> ClauseIndex:
+    """조항 색인 (Qdrant 임베디드 :memory:) — 부팅 시 룰 DB 전체 인입."""
+    index = ClauseIndex()
+    index.index_documents(collect_documents())
+    return index
+
+
 def styled_fig(figsize):
     fig, ax = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor("none")
@@ -203,12 +222,28 @@ with st.sidebar:
         ),
     }
     st.divider()
+    st.header("🏘️ 매물 선택")
+    registers = load_registers()
+    jeonse_names = [n for n, d in registers.items() if "jeonse_deposit_krw" in d.get("offer", {})]
+    wolse_names = [n for n, d in registers.items() if "monthly_rent_krw" in d.get("offer", {})]
+    villa_name = st.selectbox(
+        "전세 검토 매물",
+        jeonse_names,
+        index=jeonse_names.index("register_risky_villa.json") if "register_risky_villa.json" in jeonse_names else 0,
+        format_func=lambda n: registers[n]["property"]["address"],
+    )
+    officetel_name = st.selectbox(
+        "월세 대안 매물",
+        wolse_names,
+        format_func=lambda n: registers[n]["property"]["address"],
+    )
+    st.divider()
     api_llm = default_llm()
     _provider = {"GeminiLLM": "Gemini API 연결됨", "AnthropicLLM": "Anthropic API 연결됨"}
     st.caption("🔌 LLM: " + _provider.get(type(api_llm).__name__, "오프라인 데모 (MockLLM)"))
 
-villa = load_fixture("register_risky_villa.json")
-officetel = load_fixture("register_safe_officetel.json")
+villa = registers[villa_name]
+officetel = registers[officetel_name]
 model = risk_model()
 report = run_comparison(persona=persona, villa_doc=villa, officetel_doc=officetel, model=model)
 
@@ -227,8 +262,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab_compare, tab_eligibility, tab_whatif, tab_l0 = st.tabs(
-    ["📊 3안 비교", "✅ 대출 자격", "🔮 What-if", "⚙️ 룰 추출 라이브 (L0)"]
+tab_compare, tab_eligibility, tab_whatif, tab_l0, tab_rag = st.tabs(
+    ["📊 3안 비교", "✅ 대출 자격", "🔮 What-if", "⚙️ 룰 추출 라이브 (L0)", "📚 조항 검색"]
 )
 
 # ── 탭 1: 3안 비교 ────────────────────────────────────────────────
@@ -426,6 +461,41 @@ with tab_l0:
                 st.success(f"{persona['name']}님은 **{verdict['product_name']}** 자격을 충족합니다.")
             else:
                 st.error(f"{persona['name']}님은 미자격 — 사유: {verdict['failed']}")
+
+            added = clause_index().index_rule(result.rule)
+            st.caption(f"⚡ 조항 색인 갱신: {added}건 — '조항 검색' 탭에서 즉시 인용 가능합니다.")
+
+# ── 탭 5: 조항 검색 (Vector DB — Qdrant) ──────────────────────────
+with tab_rag:
+    st.subheader("조항 단위 검색 — 룰 DB·세제·공고를 근거 그대로 인용")
+    index = clause_index()
+    st.caption(
+        f"Qdrant 임베디드(비용 0) · 임베더 {type(index.embedder).__name__} · "
+        f"색인 {index.count()}건 · 판정은 결정론 룰엔진이 하고, 검색은 인용 전용입니다."
+    )
+    rag_query = st.text_input(
+        "질문/키워드", placeholder="예: 연소득 기준이 얼마인가요? / 월세 세액공제"
+    )
+    if rag_query:
+        results = index.search(rag_query, top_k=5)
+        if not results:
+            st.info("검색 결과가 없습니다 — 다른 키워드로 시도해 보세요.")
+        for r in results:
+            with st.container(border=True):
+                st.markdown(r["text"])
+                p = r["payload"]
+                meta = " · ".join(
+                    x for x in (
+                        p.get("source_type", ""),
+                        p.get("clause", ""),
+                        p.get("version", ""),
+                        f"검증일 {p['verified_at']}" if p.get("verified_at") else "",
+                        f"유사도 {r['score']:.2f}",
+                    ) if x
+                )
+                st.caption(meta)
+                if p.get("url"):
+                    st.caption(f"출처: {p['url']}")
 
 st.divider()
 st.caption(

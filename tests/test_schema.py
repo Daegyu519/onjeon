@@ -1,8 +1,11 @@
 """L1 스키마 게이트 테스트 — 검증 통과 전 하위 레이어 전달 금지."""
 
 import copy
+import json
 
 import pytest
+
+from tests.conftest import FIXTURES
 
 from onjeon.l1.schema import (
     ExtractionInvalid,
@@ -38,6 +41,18 @@ class TestValidateExtraction:
         doc = copy.deepcopy(load_fixture("register_risky_villa.json"))
         del doc["property"]["price_source"]["queried_at"]
         assert validate_extraction(doc)
+
+
+class TestAllRegisterFixtures:
+    """UI 선택지로 노출되는 모든 매물 픽스처는 게이트를 통과해야 한다."""
+
+    @pytest.mark.parametrize(
+        "path", sorted(FIXTURES.glob("register_*.json")), ids=lambda p: p.name
+    )
+    def test_fixture_passes_gate(self, path):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        assert validate_extraction(doc) == []
+        assert "offer" in doc, "UI 비교 입력(offer)이 있어야 한다"
 
 
 class TestGate:
