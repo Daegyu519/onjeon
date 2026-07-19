@@ -1,9 +1,11 @@
 [theme]
 base = "light"
-primaryColor = "#FFB300"
-backgroundColor = "#F5F7FA"
+primaryColor = "#FFCC00"
+backgroundColor = "#F7F7F7"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#1B2233"
+textColor = "#2B2A26"
 
 [server]
-headless = true
+# false = 로컬 실행 시 브라우저 자동 열림 (true면 URL만 출력하고 안 열림).
+# Streamlit Cloud는 이 값과 무관하게 플랫폼이 서빙하므로 배포에 영향 없음.
+headless = false
