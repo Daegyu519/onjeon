@@ -78,8 +78,12 @@ CSS = f"""
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 :root {{
   --ink: {INK}; --slate: {SLATE}; --muted: {MUTED}; --paper: {PAPER}; 
-  --card: {CARD}; --primary: {TRUST}; --risk: {RISK}; --safe: {SAFE}; 
+  --card: {CARD}; --primary: {TRUST}; --risk: {RISK}; --safe: {SAFE};
   --accent: {ACCENT}; --tint: {YELLOW_TINT};
+  /* 글래스 위 텍스트 전용 — 채움용 --risk(#FF5252)는 대비 부족(3:1)이라
+     텍스트는 더 깊은 red를 써 WCAG AA(4.5:1) 확보 (apple-design 배니시티) */
+  --risk-text: #D92D20;
+  --ink-strong: #1A1917; /* 글래스 위 헤딩 대비 강화 */
   
   /* Liquid / Glass 변수 */
   --glass-blur: blur(24px);
@@ -127,20 +131,22 @@ html, body, [class*="css"] {{
   z-index: -1;
 }}
 
+/* 아이브로우 — Toss식 배지(핏). 골드 텍스트의 낮은 대비를 배경 틴트로 보완 */
 .onj-eyebrow {{
-  font-size: 0.85rem; font-weight: 800; color: #D4A000;
-  letter-spacing: 0.02em; margin-bottom: 0.6rem;
+  display: inline-block;
+  font-size: 0.75rem; font-weight: 800; color: #8A6A00;
+  background: rgba(255, 204, 0, 0.18);
+  padding: 0.32rem 0.72rem; border-radius: 999px;
+  letter-spacing: 0.01em; margin-bottom: 0.9rem;
 }}
+/* 디스플레이 헤딩 — 큰 글자는 네거티브 트래킹·타이트 행간 (apple-design §15) */
 .onj-hero h2 {{
-  font-size: 1.7rem; line-height: 1.35; letter-spacing: -0.02em;
-  font-weight: 800; color: var(--ink); margin: 0 0 0.6rem;
+  font-size: clamp(1.5rem, 2.6vw, 2rem); line-height: 1.28;
+  letter-spacing: -0.028em; font-weight: 800;
+  color: var(--ink-strong); margin: 0 0 0.7rem;
 }}
-.onj-hero p {{ color: var(--slate); font-size: 1rem; margin: 0 0 1rem; }}
-.onj-hero .amount {{ 
-  color: var(--risk); font-weight: 800; 
-  background: linear-gradient(90deg, #FF5252, #FF2A2A);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-}}
+.onj-hero p {{ color: #6B665C; font-size: 1rem; line-height: 1.6; margin: 0 0 1rem; }}
+.onj-hero .amount {{ color: var(--risk-text); font-weight: 800; }}
 
 /* 3안 옵션 카드 — 부드러운 호버 트랜지션 */
 .onj-option {{
@@ -162,10 +168,10 @@ html, body, [class*="css"] {{
 }}
 .onj-option .label {{ font-size: 0.85rem; font-weight: 700; color: var(--slate); }}
 .onj-option .value {{
-  font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--ink);
-  line-height: 1.2; margin-top: 0.2rem;
+  font-size: clamp(1.7rem, 2.4vw, 2rem); font-weight: 800; letter-spacing: -0.03em;
+  color: var(--ink-strong); line-height: 1.15; margin-top: 0.25rem;
 }}
-.onj-option .eloss {{ font-size: 0.85rem; color: var(--risk); font-weight: 700; margin-top: 0.3rem; }}
+.onj-option .eloss {{ font-size: 0.85rem; color: var(--risk-text); font-weight: 700; margin-top: 0.3rem; }}
 
 /* 최적(Best) 카드 — KB 그라데이션 강조 */
 .onj-option.best {{ 
