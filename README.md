@@ -49,7 +49,10 @@ cp .env.example .env   # GEMINI_API_KEY, MOLIT_API_KEY 등 입력
 .venv/bin/python -m pytest
 
 # 데모 실행 → http://localhost:8501
+./run.sh                # 원클릭 (권장 — 올바른 .venv로 자동 기동)
+# 또는 직접:
 .venv/bin/python -m streamlit run app.py
+# ⚠️ 그냥 'streamlit run app.py'는 의존성 없는 전역 Python으로 실행돼 실패합니다
 ```
 
 - **API 키 없이 전 구간 데모 가능** (MockLLM 오프라인 경로).
