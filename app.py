@@ -56,7 +56,9 @@ import matplotlib.font_manager as _fm
 
 for _font_path in _fm.findSystemFonts(fontpaths=["/usr/share/fonts/truetype/nanum"]):
     _fm.fontManager.addfont(_font_path)  # Streamlit Cloud(Linux)
-matplotlib.rcParams["font.family"] = ["Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"]
+# NanumGothic은 로컬(설치됨)·Cloud(packages.txt fonts-nanum) 양쪽에서 동작 —
+# 차트 한글 깨짐(두부) 방지의 핵심. AppleGothic은 Mac 로컬 폴백.
+matplotlib.rcParams["font.family"] = ["NanumGothic", "AppleGothic", "Apple SD Gothic Neo", "sans-serif"]
 matplotlib.rcParams["axes.unicode_minus"] = False
 
 FIXTURES = ROOT / "data" / "fixtures"
@@ -69,8 +71,11 @@ FEATURE_LABELS = {
 }
 
 # ── Liquid Glass CSS 주입 ──────────────────────────────────────────
+# @import는 스타일시트 최상단이어야 유효(:root보다 앞). Pretendard를 CDN에서
+# 로드해 UI에 실제 적용한다. CDN 실패 시 NanumGothic/시스템 폰트로 폴백.
 CSS = f"""
 <style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 :root {{
   --ink: {INK}; --slate: {SLATE}; --muted: {MUTED}; --paper: {PAPER}; 
   --card: {CARD}; --primary: {TRUST}; --risk: {RISK}; --safe: {SAFE}; 
@@ -89,7 +94,7 @@ CSS = f"""
 }}
 
 html, body, [class*="css"] {{
-  font-family: "Pretendard", "Apple SD Gothic Neo", -apple-system, system-ui, sans-serif;
+  font-family: "Pretendard", "NanumGothic", "Apple SD Gothic Neo", -apple-system, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }}
 
