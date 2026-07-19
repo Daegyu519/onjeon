@@ -3,14 +3,14 @@ title: 온전
 emoji: 🏠
 colorFrom: yellow
 colorTo: gray
-sdk: streamlit
-sdk_version: 1.44.0
-app_file: app.py
+sdk: docker
+app_port: 7860
 pinned: false
 ---
 
 <!-- 위 YAML은 Hugging Face Spaces 배포 설정입니다 (GitHub에서는 무시됨).
-     Space 생성 시 HF가 보여주는 sdk_version과 다르면 그 값으로 바꾸세요. -->
+     HF가 Streamlit 네이티브 SDK를 폐지해 Docker SDK로 Streamlit을 구동합니다
+     (Dockerfile 참조). -->
 
 # 온전(穩全) — 리스크 조정 주거비용 기반 청년 주거 의사결정 AI
 
