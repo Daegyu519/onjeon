@@ -84,7 +84,15 @@ CSS = f"""
   /* Liquid / Glass 변수 */
   --glass-blur: blur(24px);
   --glass-border: rgba(255, 255, 255, 0.5);
-  --liquid-easing: cubic-bezier(0.175, 0.885, 0.32, 1.15); /* 탄성있는 텐션 */
+  --liquid-easing: cubic-bezier(0.175, 0.885, 0.32, 1.15); /* 탄성있는 텐션(Toss press) */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1); /* Apple 감속(스크롤 리빌) */
+}}
+
+/* 스크롤 리빌 — 순수 CSS animation-timeline. JS 불필요, Streamlit 재실행 안전
+   (마운트 시점이 아닌 스크롤 위치 기반이라 입력 변경 시 깜빡이지 않음) */
+@keyframes onj-reveal {{
+  from {{ opacity: 0; transform: translateY(16px); }}
+  to   {{ opacity: 1; transform: translateY(0); }}
 }}
 
 /* 전체 배경에 은은한 메쉬 그라데이션 부여 (글래스모피즘 극대화) */
@@ -143,11 +151,14 @@ html, body, [class*="css"] {{
   border-radius: 28px;
   padding: 1.4rem 1.4rem; height: 100%;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
-  transition: transform 0.4s var(--liquid-easing), box-shadow 0.4s ease;
+  transition: transform 0.3s var(--ease-out-expo), box-shadow 0.3s ease;
 }}
-.onj-option:hover {{ 
-  transform: translateY(-6px) scale(1.01); 
-  box-shadow: 0 16px 40px rgba(255, 204, 0, 0.1); 
+/* hover는 정밀 포인터(마우스)에서만 — 터치기기서 hover 고착 방지 */
+@media (hover: hover) and (pointer: fine) {{
+  .onj-option:hover {{
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 16px 40px rgba(255, 204, 0, 0.1);
+  }}
 }}
 .onj-option .label {{ font-size: 0.85rem; font-weight: 700; color: var(--slate); }}
 .onj-option .value {{
@@ -179,14 +190,17 @@ html, body, [class*="css"] {{
   font-weight: 800 !important;
   padding: 0.6rem 1.2rem !important;
   box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.6) !important;
-  transition: all 0.3s var(--liquid-easing) !important;
+  /* press는 140ms 즉각 피드백, 그 외(shadow 등)는 부드럽게 */
+  transition: transform 140ms var(--liquid-easing), box-shadow 0.3s ease !important;
 }}
-.stButton > button:hover {{ 
-  transform: translateY(-2px); 
-  box-shadow: 0 8px 20px rgba(255, 204, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.8) !important; 
+@media (hover: hover) and (pointer: fine) {{
+  .stButton > button:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 204, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+  }}
 }}
-.stButton > button:active {{ 
-  transform: scale(0.93); /* 클릭 시 액체처럼 꾹 눌리는 효과 */
+.stButton > button:active {{
+  transform: scale(0.97); /* press 피드백 — 예산 내 미세 스케일 */
 }}
 
 /* Expander, Inputs 등에 Glass 효과 적용 */
@@ -202,8 +216,18 @@ html, body, [class*="css"] {{
   border-color: #FFCC00 !important;
 }}
 
+/* 스크롤 리빌 유틸 — 하단 근거 패널 등 '가끔 스크롤 시' 보는 영역에만 부여.
+   animation-timeline은 스크롤 위치 기반이라 재실행에도 깜빡이지 않는다. */
+.onj-reveal {{
+  animation: onj-reveal linear both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 30%;
+}}
+
 @media (prefers-reduced-motion: reduce) {{
   .onj-option, .stButton > button, .onj-option:hover {{ transition: none !important; transform: none !important; }}
+  /* 리빌은 제거가 아니라 강등 — 위치 이동 없이 즉시 표시(전정계 자극 회피) */
+  .onj-reveal {{ animation: none !important; opacity: 1 !important; transform: none !important; }}
 }}
 </style>
 """
@@ -453,7 +477,7 @@ with tab_compare:
         sources = report["sources"]
         st.markdown(
             f"""
-<ul class="onj-cite">
+<ul class="onj-cite onj-reveal">
   {citations_html}
   <li>시세 — 국토부 실거래가 <span class="loc">기준일 {sources['market_price_queried_at']}</span></li>
   <li>낙찰가율 — {sources['auction_rates_source']} <span class="loc">기준일 {sources['auction_rates_queried_at']}</span></li>
