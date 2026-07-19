@@ -95,6 +95,39 @@ def _warn_before_retry(retry_state) -> None:
     )
 
 
+def live_market_price(
+    region: str,
+    *,
+    deal_ym: str | None = None,
+    service_key: str | None = None,
+    http_get=requests.get,
+    retry_wait=None,
+) -> dict:
+    """지역명 → 실거래가 중위 시세(원). L3/앱이 소비하는 실데이터 시세 진입점.
+
+    지역을 시군구 코드로 해석(서울 25구)한 뒤 실거래가를 조회해 중위가를 낸다.
+    미지원 지역·거래 0건이면 ValueError(호출측이 수동 입력으로 폴백).
+    """
+    from onjeon.data_pipeline.regions import recent_deal_ym, resolve_lawd_cd
+
+    lawd_cd = resolve_lawd_cd(region)
+    if lawd_cd is None:
+        raise ValueError(f"실거래가 자동 조회 미지원 지역: {region!r} (서울 25구만 커버)")
+    result = fetch_trades(
+        lawd_cd,
+        deal_ym or recent_deal_ym(),
+        service_key=service_key,
+        http_get=http_get,
+        retry_wait=retry_wait,
+    )
+    trades = result["trades"]
+    return {
+        "market_price_krw": median_price_krw(trades),
+        "n": len(trades),
+        "source": result["source"],
+    }
+
+
 def fetch_trades(
     lawd_cd: str,
     deal_ym: str,

@@ -26,6 +26,8 @@ import streamlit as st
 
 from onjeon.compare import run_comparison
 from onjeon.config import load_env
+from onjeon.data_pipeline.molit import live_market_price
+from onjeon.data_pipeline.regions import SEOUL_LAWD_CD
 from onjeon.display import citation_label, krw_man
 from onjeon.l0.rule_pipeline import pipeline as rule_pipeline
 from onjeon.l1.parser import parse_register
@@ -376,9 +378,33 @@ with st.sidebar:
         )
     else:
         uploaded_pdf = st.file_uploader("등기부등본 PDF", type=["pdf"])
+        # 실거래가 자동 조회 — 지역구 선택 후 MOLIT 실데이터 중위가로 시세 채움.
+        # 버튼을 위젯보다 먼저 처리해 session_state로 값 주입(Streamlit 정석 패턴).
+        seoul_regions = list(SEOUL_LAWD_CD)
+        st.session_state.setdefault("upload_market_man_widget", 18_500)
+        upload_region = st.selectbox(
+            "지역구 (실거래가 조회용)", seoul_regions,
+            index=seoul_regions.index("관악구"),
+        )
+        if st.button("📡 실거래가로 시세 자동 조회"):
+            if not os.environ.get("MOLIT_API_KEY"):
+                st.warning("MOLIT_API_KEY가 필요합니다 (.env 또는 Secrets). 수동 입력하세요.")
+            else:
+                try:
+                    live = live_market_price(upload_region, service_key=os.environ["MOLIT_API_KEY"])
+                    st.session_state["upload_market_man_widget"] = live["market_price_krw"] // 10_000
+                    st.session_state["onj_live_note"] = (
+                        f"✅ {upload_region} 최근 실거래 {live['n']}건 중위가 "
+                        f"{krw_man(live['market_price_krw'])} (기준 {live['source']['deal_ym']})"
+                    )
+                except Exception as exc:
+                    st.session_state["onj_live_note"] = f"⚠️ 자동 조회 실패: {exc}"
+        if st.session_state.get("onj_live_note"):
+            st.caption(st.session_state["onj_live_note"])
         upload_market_man = st.number_input(
-            "시세 (만원)", 1_000, 500_000, 18_500, step=500,
-            help="등기부에는 시세가 없습니다 — 실거래가 조회값 또는 추정치를 입력하세요",
+            "시세 (만원)", min_value=1_000, max_value=500_000, step=500,
+            key="upload_market_man_widget",
+            help="등기부에는 시세가 없습니다 — 위 버튼으로 실거래가를 조회하거나 직접 입력하세요",
         )
         upload_deposit_man = st.number_input("전세 보증금 (만원)", 500, 300_000, 15_500, step=500)
     officetel_name = st.selectbox(
