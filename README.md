@@ -1,3 +1,17 @@
+---
+title: 온전
+emoji: 🏠
+colorFrom: yellow
+colorTo: gray
+sdk: streamlit
+sdk_version: 1.44.0
+app_file: app.py
+pinned: false
+---
+
+<!-- 위 YAML은 Hugging Face Spaces 배포 설정입니다 (GitHub에서는 무시됨).
+     Space 생성 시 HF가 보여주는 sdk_version과 다르면 그 값으로 바꾸세요. -->
+
 # 온전(穩全) — 리스크 조정 주거비용 기반 청년 주거 의사결정 AI
 
 > KB Future Finance A.I. Challenge 출품 프로젝트 (2026년 7월 기준 기획)
@@ -54,6 +68,11 @@ cp .env.example .env   # GEMINI_API_KEY, MOLIT_API_KEY 등 입력
 .venv/bin/python -m streamlit run app.py
 # ⚠️ 그냥 'streamlit run app.py'는 의존성 없는 전역 Python으로 실행돼 실패합니다
 ```
+
+## 배포
+
+Hugging Face Spaces(무료 16GB)로 배포합니다 — 절차는 [docs/deploy-hf.md](docs/deploy-hf.md) 참조.
+(Streamlit Community Cloud는 무료 1GB라 이 ML 스택엔 부족해 이전했습니다.)
 
 - **API 키 없이 전 구간 데모 가능** (MockLLM 오프라인 경로).
 - `GEMINI_API_KEY`(우선) 또는 `ANTHROPIC_API_KEY` 설정 시 what-if 질의·L0 룰 추출이 실제 LLM으로 동작. 기본 모델은 `gemini-2.5-flash`이며 `ONJEON_MODEL`로 교체 가능.
