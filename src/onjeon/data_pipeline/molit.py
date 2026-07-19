@@ -8,7 +8,9 @@
   4xx는 요청 자체가 잘못된 것이므로 즉시 실패. wait는 주입 가능(retry_wait).
 
 엔드포인트·서비스키: 공공데이터포털(data.go.kr) 가입 후 발급,
-.env의 MOLIT_API_KEY에 저장. [확인: 연립다세대 매매 실거래가 API 최신 스펙]
+.env의 MOLIT_API_KEY에 저장.
+스펙 검증 완료: 2026-07-19 실키 호출 — 관악구(11620) 2026-06 매매 154건 수신,
+영문 태그(dealAmount 등) 파싱 확인.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_expo
 
 logger = logging.getLogger("onjeon.data_pipeline")
 
-# 연립다세대(빌라) 매매 실거래가 — 오피스텔/전월세는 자매 엔드포인트 [확인]
+# 연립다세대(빌라) 매매 실거래가 (2026-07-19 실검증) — 오피스텔/전월세는 자매 엔드포인트
 DEFAULT_ENDPOINT = "https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade"
 
 # 신형(영문)·구형(국문) 응답 태그 모두 수용

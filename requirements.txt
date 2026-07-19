@@ -11,3 +11,4 @@ python-dotenv>=1.0
 requests>=2.32
 qdrant-client>=1.12
 fastembed>=0.4
+pypdfium2>=4.30

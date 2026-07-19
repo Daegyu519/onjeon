@@ -10,6 +10,26 @@
   },
   "criteria": [
     {
+      "field": "is_homeless",
+      "op": "==",
+      "value": true,
+      "clause": "대출대상 제1호 (무주택 세대주) [확인]",
+      "boundary_tests": [
+        { "input": true, "expect": true },
+        { "input": false, "expect": false }
+      ]
+    },
+    {
+      "field": "is_household_head",
+      "op": "==",
+      "value": true,
+      "clause": "대출대상 제1호 (무주택 세대주) [확인]",
+      "boundary_tests": [
+        { "input": true, "expect": true },
+        { "input": false, "expect": false }
+      ]
+    },
+    {
       "field": "age",
       "op": "<=",
       "value": 34,

@@ -55,7 +55,27 @@ def _extract_json(text: str) -> dict:
         raise ValueError(f"LLM 응답이 JSON이 아니다: {text[:80]!r}") from exc
 
 
-def parse_register(images: list, llm: LLMClient) -> dict:
-    """등기부 페이지 이미지 → 구조화 JSON. 스키마 게이트 통과분만 반환."""
+def parse_register(
+    images: list,
+    llm: LLMClient,
+    *,
+    market_price_krw: int | None = None,
+    price_queried_at: str | None = None,
+) -> dict:
+    """등기부 페이지 이미지 → 구조화 JSON. 스키마 게이트 통과분만 반환.
+
+    시세는 등기부에 없다 — 실제 LLM은 알 수 없으므로 사용자 입력/실거래가
+    API 값을 market_price_krw로 주입한다(게이트 전에 채워 넣음).
+    주입이 없으면 기존 게이트 규칙 그대로(시세 누락 문서 차단).
+    """
     raw = llm.complete(EXTRACT_PROMPT, system=SYSTEM_PROMPT, images=images)
-    return gate(_extract_json(raw))
+    doc = _extract_json(raw)
+    if market_price_krw is not None:
+        from datetime import date
+
+        doc.setdefault("property", {})["market_price_krw"] = int(market_price_krw)
+        doc["property"]["price_source"] = {
+            "api": "사용자 입력(수동)",
+            "queried_at": price_queried_at or date.today().isoformat(),
+        }
+    return gate(doc)

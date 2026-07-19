@@ -19,12 +19,17 @@ FIELD_LABEL = {
     "annual_income_krw": "연소득",
     "assets_krw": "순자산",
     "deposit_krw": "임차보증금",
+    "is_homeless": "무주택 여부",
+    "is_household_head": "세대주 여부",
+    "works_at_sme": "중소기업 재직 여부",
 }
 
 OP_LABEL = {"<=": "이하", ">=": "이상", "==": "일치", "in": "중 하나"}
 
 
 def _fmt_value(value) -> str:
+    if isinstance(value, bool):
+        return "예" if value else "아니오"
     if isinstance(value, int):
         return f"{value:,}"
     return str(value)

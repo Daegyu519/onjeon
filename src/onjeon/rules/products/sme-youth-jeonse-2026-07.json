@@ -10,6 +10,16 @@
   },
   "criteria": [
     {
+      "field": "works_at_sme",
+      "op": "==",
+      "value": true,
+      "clause": "대출대상 제3호 (중소·중견기업 재직) [확인]",
+      "boundary_tests": [
+        { "input": true, "expect": true },
+        { "input": false, "expect": false }
+      ]
+    },
+    {
       "field": "age",
       "op": "<=",
       "value": 34,

@@ -4,5 +4,8 @@
   "annual_income_krw": 36000000,
   "assets_krw": 30000000,
   "expected_stay_years": 4,
+  "is_homeless": true,
+  "is_household_head": true,
+  "works_at_sme": false,
   "note": "사회초년생 2년차 페르소나 — docs/design.md §1"
 }

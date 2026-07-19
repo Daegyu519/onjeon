@@ -88,13 +88,19 @@ class TestEligibilityVerticalSlice:
             "annual_income_krw": persona["annual_income_krw"],
             "assets_krw": persona["assets_krw"],
             "deposit_krw": villa["offer"]["jeonse_deposit_krw"],
+            "is_homeless": persona["is_homeless"],
+            "is_household_head": persona["is_household_head"],
+            "works_at_sme": persona["works_at_sme"],
         }
         by_id = {p["rule_id"]: evaluate(user, p) for p in load_products()}
 
+        # 무주택 세대주 요건 포함 전 조건 충족
         assert by_id["youth-jeonse-loan-2026-07"]["eligible"] is True
 
         sme = by_id["sme-youth-jeonse-2026-07"]
         assert sme["eligible"] is False
-        [failure] = sme["failed"]
-        assert failure["gap"] == 1_000_000
+        failed_fields = {f["field"] for f in sme["failed"]}
+        assert failed_fields == {"annual_income_krw", "works_at_sme"}  # 소득 초과 + 미재직
+        income_failure = next(f for f in sme["failed"] if f["field"] == "annual_income_krw")
+        assert income_failure["gap"] == 1_000_000
         assert sme["alternatives"] == ["youth-jeonse-loan-2026-07"]
