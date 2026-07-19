@@ -60,7 +60,10 @@ for _font_path in _fm.findSystemFonts(fontpaths=["/usr/share/fonts/truetype/nanu
     _fm.fontManager.addfont(_font_path)  # Streamlit Cloud(Linux)
 # NanumGothic은 로컬(설치됨)·Cloud(packages.txt fonts-nanum) 양쪽에서 동작 —
 # 차트 한글 깨짐(두부) 방지의 핵심. AppleGothic은 Mac 로컬 폴백.
-matplotlib.rcParams["font.family"] = ["NanumGothic", "AppleGothic", "Apple SD Gothic Neo", "sans-serif"]
+# NanumGothic만 지정 — 로컬(설치됨)·Cloud(fonts-nanum) 공통 동작.
+# AppleGothic 등 Mac 전용 폰트를 목록에 두면 Linux(Cloud)에서 렌더마다
+# 'findfont not found' 경고가 수천 줄 로그를 도배하므로 제외.
+matplotlib.rcParams["font.family"] = ["NanumGothic", "sans-serif"]
 matplotlib.rcParams["axes.unicode_minus"] = False
 
 FIXTURES = ROOT / "data" / "fixtures"

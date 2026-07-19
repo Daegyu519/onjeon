@@ -105,10 +105,18 @@ class FastEmbedEmbedder:
 
 
 def default_embedder() -> Embedder:
-    """fastembed 사용 가능하면 FastEmbed, 아니면 해시 폴백 (조용히 강등 금지 — 호출측이 라벨 표시)."""
-    try:
-        import fastembed  # noqa: F401
+    """임베더 선택 — 기본은 메모리 0·다운로드 0인 HashEmbedder(배포 안전).
 
-        return FastEmbedEmbedder()
-    except ImportError:
-        return HashEmbedder()
+    ONJEON_EMBED_MODEL이 설정된 경우에만 FastEmbed(해당 모델)로 승격한다.
+    이유: Streamlit Cloud 무료 티어(RAM 1GB)에서 FastEmbed 모델(~0.5GB)을
+    시작 시 올리면 OOM으로 앱이 죽는다. 로컬·고사양 환경은 .env에
+    ONJEON_EMBED_MODEL=intfloat/multilingual-e5-large를 설정해 풀 품질 사용.
+    """
+    if os.environ.get("ONJEON_EMBED_MODEL"):
+        try:
+            import fastembed  # noqa: F401
+
+            return FastEmbedEmbedder()
+        except ImportError:
+            return HashEmbedder()
+    return HashEmbedder()
