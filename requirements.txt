@@ -12,3 +12,5 @@ requests>=2.32
 qdrant-client>=1.12
 fastembed>=0.4
 pypdfium2>=4.30
+tenacity>=9.0
+pydantic>=2.7
