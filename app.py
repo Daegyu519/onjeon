@@ -222,6 +222,24 @@ html, body, [class*="css"] {{
   border-color: #FFCC00 !important;
 }}
 
+/* st.container(border=True) — 대출 자격·조항 검색 카드를 히어로/3안과 같은
+   글래스 톤으로 통일. 이 testid는 bordered container 전용이라 과적용 안 됨 */
+[data-testid="stVerticalBlockBorderWrapper"] {{
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 16px rgba(43, 42, 38, 0.03);
+}}
+/* expander도 같은 글래스로 */
+[data-testid="stExpander"] details {{
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-radius: 18px !important;
+  overflow: hidden;
+}}
+
 /* 스크롤 리빌 유틸 — 하단 근거 패널 등 '가끔 스크롤 시' 보는 영역에만 부여.
    animation-timeline은 스크롤 위치 기반이라 재실행에도 깜빡이지 않는다. */
 .onj-reveal {{
