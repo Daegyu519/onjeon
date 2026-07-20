@@ -13,6 +13,13 @@ if [ "${1:-}" = "stop" ]; then
   exit 0
 fi
 
+# 현재 실행 중인 터널의 URL만 다시 출력 (URL을 놓쳤을 때)
+if [ "${1:-}" = "url" ]; then
+  URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .run/tunnel.log 2>/dev/null | tail -1)
+  [ -n "$URL" ] && echo "🌐 $URL" || echo "실행 중인 터널 없음 — 먼저 ./tunnel.sh 실행"
+  exit 0
+fi
+
 PORT="${1:-8501}"
 command -v cloudflared >/dev/null || { echo "❌ cloudflared 필요: brew install cloudflared"; exit 1; }
 [ -x .venv/bin/python ] || { echo "❌ .venv 필요: uv venv --python 3.12 .venv && uv pip install -p .venv -e ."; exit 1; }
@@ -35,9 +42,9 @@ curl -s "http://localhost:$PORT/_stcore/health" 2>/dev/null | grep -q ok \
 
 # 2) 터널 기동 + 공개 URL 추출
 nohup cloudflared tunnel --url "http://localhost:$PORT" > .run/tunnel.log 2>&1 &
-echo "🌐 공개 URL 발급 중…"
+echo "🌐 공개 URL 발급 중… (최대 60초)"
 URL=""
-for i in $(seq 1 40); do
+for i in $(seq 1 120); do
   URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .run/tunnel.log 2>/dev/null | head -1)
   [ -n "$URL" ] && break
   sleep 0.5
@@ -45,9 +52,12 @@ done
 
 echo ""
 if [ -n "$URL" ]; then
+  echo "════════════════════════════════════════════════════════════"
   echo "✅ 공개 URL:  $URL"
+  echo "════════════════════════════════════════════════════════════"
   echo "   • 이 Mac이 켜져 있는 동안 유효 (재시작하면 URL이 바뀜)"
-  echo "   • 종료: ./tunnel.sh stop"
+  echo "   • URL 다시 보기: ./tunnel.sh url   |   종료: ./tunnel.sh stop"
 else
-  echo "❌ URL 발급 실패 — .run/tunnel.log 확인"; tail -12 .run/tunnel.log
+  echo "⏳ 아직 URL이 안 잡혔습니다. 잠시 후 다음으로 확인하세요:"
+  echo "   ./tunnel.sh url"
 fi
