@@ -15,7 +15,8 @@ fi
 
 # 현재 실행 중인 터널의 URL만 다시 출력 (URL을 놓쳤을 때)
 if [ "${1:-}" = "url" ]; then
-  URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .run/tunnel.log 2>/dev/null | tail -1)
+  # || true : URL 미발견 시 grep이 1을 반환해도 set -e로 죽지 않게
+  URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .run/tunnel.log 2>/dev/null | tail -1 || true)
   [ -n "$URL" ] && echo "🌐 $URL" || echo "실행 중인 터널 없음 — 먼저 ./tunnel.sh 실행"
   exit 0
 fi
@@ -45,7 +46,8 @@ nohup cloudflared tunnel --url "http://localhost:$PORT" > .run/tunnel.log 2>&1 &
 echo "🌐 공개 URL 발급 중… (최대 60초)"
 URL=""
 for i in $(seq 1 120); do
-  URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .run/tunnel.log 2>/dev/null | head -1)
+  # || true : URL이 아직 로그에 없으면 grep이 1을 반환 → set -e로 죽던 버그 방지
+  URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" .run/tunnel.log 2>/dev/null | head -1 || true)
   [ -n "$URL" ] && break
   sleep 0.5
 done
