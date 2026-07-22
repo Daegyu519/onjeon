@@ -16,6 +16,8 @@ _SIDO_RE = re.compile(r"(서울특별시|부산광역시|대구광역시|인천�
                       r"전라북도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)")
 _SIGUNGU_RE = re.compile(r"[가-힣]+(?:시|군|구)")  # findall — sido와 겹치면 제외
 _ROAD_RE = re.compile(r"\[도로명주소\]\s*(.+)")
+_DONG_RE = re.compile(r"[가-힣]+(?:동|가|리)")  # 법정동(예: 봉천동) — 첫 매치
+_JIBUN_RE = re.compile(r"\d+(?:-\d+)?")  # 지번(예: 100-1) — dong 매치 위치 이후에서 검색
 
 
 class NoTextLayer(ValueError):
@@ -33,10 +35,15 @@ def extract_fields(text: str) -> dict:
     sigungu_val = next((t for t in _SIGUNGU_RE.findall(text) if t != sido_val), None)
     use = _USE_RE.search(text)
     road = _ROAD_RE.search(text)
+    dong_m = _DONG_RE.search(text)
+    dong_val = dong_m.group(0) if dong_m else None
+    jibun_m = _JIBUN_RE.search(text, dong_m.end()) if dong_m else None
+    jibun_val = jibun_m.group(0) if jibun_m else None
     return {
         "sido": sido_val,
         "sigungu": sigungu_val,
-        "jibun": None,  # [확인] 지번 상세 파싱은 실물 등기부로 규칙 확정
+        "dong": dong_val,
+        "jibun": jibun_val,
         "road_addr": road.group(1).strip() if road else None,
         "exclusive_area_m2": float(area_m.group(1).replace(",", "")),
         "building_use": use.group(1) if use else None,
