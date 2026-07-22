@@ -40,3 +40,20 @@ def recent_deal_ym(today: str | None = None) -> str:
     if month == 0:
         year, month = year - 1, 12
     return f"{year}{month:02d}"
+
+
+def month_range(start_ym: str, end_ym: str) -> list[str]:
+    """계약년월 범위를 월 단위로 펼친다: '202601','202604' → ['202601'..'202604'].
+
+    실거래가 API에는 범위 파라미터가 없어 월별로 조회해야 하므로, 원하는 기간을
+    이 헬퍼로 월 리스트로 변환한 뒤 각 월을 순회한다. start_ym > end_ym이면 ValueError.
+    """
+    sy, sm = int(start_ym[:4]), int(start_ym[4:])
+    ey, em = int(end_ym[:4]), int(end_ym[4:])
+    if (sy, sm) > (ey, em):
+        raise ValueError(f"시작월이 종료월보다 늦다: {start_ym} > {end_ym}")
+    out, y, m = [], sy, sm
+    while (y, m) <= (ey, em):
+        out.append(f"{y}{m:02d}")
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out

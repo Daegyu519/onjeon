@@ -12,7 +12,13 @@ import requests
 from tenacity import wait_none
 
 from onjeon.data_pipeline.auction_rates import build_auction_rates, write_auction_rules
-from onjeon.data_pipeline.molit import fetch_trades, median_price_krw, parse_trades
+from onjeon.data_pipeline.molit import (
+    fetch_period,
+    fetch_trades,
+    median_price_krw,
+    parse_trades,
+    price_history,
+)
 
 SAMPLE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <response>
@@ -176,6 +182,123 @@ class TestFetchTradesRetry:
                 http_get=leaky_get, retry_wait=wait_none(),
             )
         assert "super-secret-key" not in str(excinfo.value)
+
+
+def _month_xml(deal_amounts: list[str]) -> str:
+    """계약월 응답 XML 생성 — deal_amounts는 만원 단위 문자열('15,000')."""
+    items = "".join(
+        f"<item><dealAmount>{a}</dealAmount><excluUseAr>30</excluUseAr><floor>3</floor>"
+        f"<dealYear>2026</dealYear><dealMonth>6</dealMonth><dealDay>1</dealDay>"
+        f"<umdNm>봉천동</umdNm></item>"
+        for a in deal_amounts
+    )
+    return f"<response><body><items>{items}</items></body></response>"
+
+
+class _MonthlyHTTP:
+    """DEAL_YMD별로 다른 XML을 반환하는 fake http_get. 조회한 월을 순서대로 기록한다."""
+
+    def __init__(self, by_ym: dict[str, list[str]]):
+        self.by_ym = by_ym
+        self.queried: list[str] = []
+
+    def __call__(self, url, params=None, timeout=None):
+        ym = params["DEAL_YMD"]
+        self.queried.append(ym)
+        xml = _month_xml(self.by_ym.get(ym, []))
+
+        class _Resp:
+            text = xml
+
+            def raise_for_status(self):
+                pass
+
+        return _Resp()
+
+
+class TestFetchPeriod:
+    def _http(self):
+        # 202604 거래 0건, 202605 2건, 202606 1건
+        return _MonthlyHTTP(
+            {"202604": [], "202605": ["15,000", "16,500"], "202606": ["20,000"]}
+        )
+
+    def _fetch(self, http):
+        return fetch_period(
+            "11620", "202604", "202606", service_key="k", http_get=http, retry_wait=wait_none()
+        )
+
+    def test_queries_every_month_in_range_including_empty(self):
+        http = self._http()
+        self._fetch(http)
+        assert http.queried == ["202604", "202605", "202606"]
+
+    def test_aggregates_all_trades_across_months(self):
+        result = self._fetch(self._http())
+        assert len(result["trades"]) == 3
+
+    def test_each_trade_tagged_with_its_deal_ym(self):
+        result = self._fetch(self._http())
+        by_amount = {t["price_krw"]: t["deal_ym"] for t in result["trades"]}
+        assert by_amount[200_000_000] == "202606"
+        assert by_amount[150_000_000] == "202605"
+
+    def test_by_month_groups_trades(self):
+        result = self._fetch(self._http())
+        assert len(result["by_month"]["202605"]) == 2
+        assert len(result["by_month"]["202606"]) == 1
+        assert result["by_month"]["202604"] == []  # 0건 월도 키는 존재
+
+    def test_source_records_range_and_queried_at(self):
+        result = self._fetch(self._http())
+        src = result["source"]
+        assert src["lawd_cd"] == "11620"
+        assert src["start_ym"] == "202604"
+        assert src["end_ym"] == "202606"
+        assert src["months"] == ["202604", "202605", "202606"]
+        assert src["queried_at"]  # 조회 기준일 필수 (CLAUDE.md)
+
+    def test_requires_service_key(self, monkeypatch):
+        monkeypatch.delenv("MOLIT_API_KEY", raising=False)
+        with pytest.raises(ValueError):
+            fetch_period("11620", "202604", "202606")
+
+
+class TestPriceHistory:
+    def _http(self):
+        return _MonthlyHTTP(
+            {"202604": [], "202605": ["15,000", "16,500"], "202606": ["20,000"]}
+        )
+
+    def _run(self, http):
+        return price_history(
+            "관악구", "202604", "202606", service_key="k", http_get=http, retry_wait=wait_none()
+        )
+
+    def test_median_price_per_month(self):
+        result = self._run(self._http())
+        assert result["history"]["202605"]["market_price_krw"] == 157_500_000
+        assert result["history"]["202606"]["market_price_krw"] == 200_000_000
+        assert result["history"]["202605"]["n"] == 2
+
+    def test_skips_months_with_no_trades(self):
+        result = self._run(self._http())
+        assert "202604" not in result["history"]  # 0건 월은 시세 추이에서 제외
+
+    def test_history_is_chronological(self):
+        result = self._run(self._http())
+        assert list(result["history"].keys()) == ["202605", "202606"]
+
+    def test_unknown_region_raises(self):
+        with pytest.raises(ValueError):
+            price_history("제주시", "202604", "202606", service_key="k", http_get=self._http())
+
+    def test_source_records_range(self):
+        result = self._run(self._http())
+        assert result["source"]["lawd_cd"] == "11620"
+        assert result["source"]["start_ym"] == "202604"
+        assert result["source"]["end_ym"] == "202606"
+        assert result["source"]["queried_at"]
 
 
 class TestAuctionRatesBuilder:

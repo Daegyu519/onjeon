@@ -194,3 +194,101 @@ def fetch_trades(
             "queried_at": queried_at,
         },
     }
+
+
+def fetch_period(
+    lawd_cd: str,
+    start_ym: str,
+    end_ym: str,
+    *,
+    service_key: str | None = None,
+    endpoint: str = DEFAULT_ENDPOINT,
+    http_get=requests.get,
+    retry_wait=None,
+) -> dict:
+    """기간(월 범위) 실거래가 조회. API에 범위 파라미터가 없어 월별로 순회 조회한다.
+
+    start_ym~end_ym을 월 단위로 펼쳐(month_range) 각 월을 조회하고, 거래마다
+    조회된 계약월(deal_ym)을 태깅한다. 월별 그룹(by_month)과 조회 메타데이터
+    (source: 범위·월 목록·조회 기준일)를 함께 반환한다. 0건인 월도 by_month에
+    빈 리스트로 남겨 "조회했으나 거래 없음"과 "미조회"를 구분한다.
+    """
+    from onjeon.data_pipeline.regions import month_range
+
+    months = month_range(start_ym, end_ym)
+    all_trades: list[dict] = []
+    by_month: dict[str, list[dict]] = {}
+    for ym in months:
+        result = fetch_trades(
+            lawd_cd,
+            ym,
+            service_key=service_key,
+            endpoint=endpoint,
+            http_get=http_get,
+            retry_wait=retry_wait,
+        )
+        tagged = [{**t, "deal_ym": ym} for t in result["trades"]]
+        by_month[ym] = tagged
+        all_trades.extend(tagged)
+
+    queried_at = date.today().isoformat()
+    logger.info(
+        "실거래가 기간 조회 lawd_cd=%s 범위=%s~%s 월수=%d 총거래=%d queried_at=%s",
+        lawd_cd,
+        start_ym,
+        end_ym,
+        len(months),
+        len(all_trades),
+        queried_at,
+    )
+    return {
+        "trades": all_trades,
+        "by_month": by_month,
+        "source": {
+            "api": "국토부 실거래가 (RTMSDataSvcRHTrade)",
+            "lawd_cd": lawd_cd,
+            "start_ym": start_ym,
+            "end_ym": end_ym,
+            "months": months,
+            "queried_at": queried_at,
+        },
+    }
+
+
+def price_history(
+    region: str,
+    start_ym: str,
+    end_ym: str,
+    *,
+    service_key: str | None = None,
+    http_get=requests.get,
+    retry_wait=None,
+) -> dict:
+    """지역명 → 월별 중위 시세 추이. 전세가율·시장리스크의 기간 근거로 쓴다.
+
+    거래 0건인 월은 중위가를 낼 수 없으므로 추이에서 제외한다(조회 자체는 함).
+    history는 계약월 오름차순. 미지원 지역이면 ValueError(호출측이 수동 입력 폴백).
+    """
+    from onjeon.data_pipeline.regions import resolve_lawd_cd
+
+    lawd_cd = resolve_lawd_cd(region)
+    if lawd_cd is None:
+        raise ValueError(f"실거래가 자동 조회 미지원 지역: {region!r} (서울 25구만 커버)")
+
+    period = fetch_period(
+        lawd_cd,
+        start_ym,
+        end_ym,
+        service_key=service_key,
+        http_get=http_get,
+        retry_wait=retry_wait,
+    )
+    history = {
+        ym: {"market_price_krw": median_price_krw(trades), "n": len(trades)}
+        for ym, trades in period["by_month"].items()
+        if trades
+    }
+    return {
+        "history": history,
+        "source": {**period["source"], "region": region},
+    }

@@ -3,7 +3,7 @@
 import pytest
 
 from onjeon.data_pipeline.molit import live_market_price
-from onjeon.data_pipeline.regions import recent_deal_ym, resolve_lawd_cd
+from onjeon.data_pipeline.regions import month_range, recent_deal_ym, resolve_lawd_cd
 
 SAMPLE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <response><header><resultCode>000</resultCode></header><body><items>
@@ -34,6 +34,21 @@ class TestRecentDealYm:
 
     def test_january_rolls_to_prev_year(self):
         assert recent_deal_ym("2026-01-10") == "202512"
+
+
+class TestMonthRange:
+    def test_single_month_when_start_equals_end(self):
+        assert month_range("202606", "202606") == ["202606"]
+
+    def test_enumerates_consecutive_months(self):
+        assert month_range("202601", "202604") == ["202601", "202602", "202603", "202604"]
+
+    def test_crosses_year_boundary(self):
+        assert month_range("202511", "202602") == ["202511", "202512", "202601", "202602"]
+
+    def test_start_after_end_raises(self):
+        with pytest.raises(ValueError):
+            month_range("202606", "202601")
 
 
 class TestLiveMarketPrice:
