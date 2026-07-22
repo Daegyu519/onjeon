@@ -8,3 +8,6 @@ __pycache__/
 .env
 data/qdrant/
 .run/
+# 실물 등기부 등 개인정보 문서 — 공개 리포 유출 방지
+data/registers_raw/
+*.pdf
