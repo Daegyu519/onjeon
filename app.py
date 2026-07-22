@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -32,7 +33,7 @@ from onjeon.display import citation_label, krw_man
 from onjeon.l0.rule_pipeline import pipeline as rule_pipeline
 from onjeon.l1.parser import parse_register
 from onjeon.l1.pdf import pdf_to_images
-from onjeon.l1.schema import ExtractionInvalid
+from onjeon.l1.schema import ExtractionInvalid, senior_claims
 from onjeon.l2.model import train
 from onjeon.l2.synth import generate
 from onjeon.l3.eligibility import evaluate
@@ -321,6 +322,80 @@ def parse_uploaded_register(pdf_bytes: bytes, market_price_krw: int, jeonse_depo
     }
     return doc
 
+def build_register_doc(*, building_type, region, market_krw, offer, lien_krw=0, senior_lease_krw=0):
+    """사용자 직접 입력값 → 스키마 유효 등기부 문서. LLM·파싱 없이 확실히 동작.
+
+    계산에 실제로 쓰는 필드(시세·건물유형·지역·근저당·보증금)를 직접 채워
+    게이트를 100% 통과시키고 run_comparison에 바로 넣는다. 이게 '내 데이터로
+    실제 분석'의 가장 확실한 경로 — 스키마 불일치가 원천적으로 없다.
+    """
+    eul = []
+    if lien_krw and lien_krw > 0:
+        eul.append({
+            "rank": 1, "type": "근저당권설정", "max_claim_krw": int(lien_krw),
+            "cancelled": False,
+            "source_loc": {"page": 1, "section": "을구", "entry_no": 1},
+        })
+    return {
+        "property": {
+            "address": f"직접 입력 매물 ({region} · {building_type})",
+            "building_type": building_type, "region": region,
+            "market_price_krw": int(market_krw),
+            "price_source": {"api": "사용자 직접 입력", "queried_at": date.today().isoformat()},
+        },
+        "register": {
+            "title_section": {"owner": "직접 입력", "ownership_changes": []},
+            "gap_section": [], "eul_section": eul,
+            "senior_lease_deposits_krw": int(senior_lease_krw or 0),
+        },
+        "offer": offer,
+    }
+
+
+def render_register_panel(villa: dict) -> None:
+    """업로드·입력한 등기부 내용을 오른쪽 패널에 표제부/갑구/을구로 정리해 표시."""
+    prop = villa.get("property", {})
+    reg = villa.get("register", {})
+    offer = villa.get("offer", {})
+    price = prop.get("market_price_krw") or 0
+    deposit = offer.get("jeonse_deposit_krw")
+
+    st.markdown("#### 📄 등기부 분석 결과")
+    st.markdown(f"**소재지** · {prop.get('address', '-')}")
+    owner = reg.get("title_section", {}).get("owner", "-")
+    st.markdown(f"**건물유형** {prop.get('building_type', '-')}　**소유자** {owner}")
+    line = f"**시세** {krw_man(price)}"
+    if deposit:
+        line += f"　**전세보증금** {krw_man(deposit)}"
+    st.markdown(line)
+
+    st.markdown("**을구** — 근저당·전세권 (선순위 채권)")
+    eul = reg.get("eul_section", [])
+    if eul:
+        for e in eul:
+            amt = krw_man(e["max_claim_krw"]) if e.get("max_claim_krw") else "금액 미상"
+            mark = " · ~~말소~~" if e.get("cancelled") else ""
+            st.markdown(f"- {e.get('type', '항목')} · {amt}{mark}")
+    else:
+        st.caption("등기된 선순위 권리 없음")
+
+    gap = reg.get("gap_section", [])
+    if gap:
+        st.markdown("**갑구** — 압류·가압류·소유권")
+        for g in gap:
+            mark = " · ~~말소~~" if g.get("cancelled") else ""
+            st.markdown(f"- {g.get('type', '항목')}{mark}")
+
+    senior = senior_claims(reg)
+    st.divider()
+    mc1, mc2 = st.columns(2)
+    if deposit and price:
+        mc1.metric("전세가율", f"{deposit / price:.0%}")
+    mc2.metric("선순위 채권 합계", krw_man(senior))
+    if price:
+        st.caption(f"근저당·선순위 / 시세 = {senior / price:.0%} (높을수록 미회수 위험↑)")
+
+
 def styled_fig(figsize):
     """KB 스타일이 가미된 차트"""
     fig, ax = plt.subplots(figsize=figsize)
@@ -341,111 +416,122 @@ st.caption(
     "숫자는 결정론 엔진(L3)과 ML(L2)이, 해석·인용만 LLM이 담당합니다."
 )
 
-# ── 사이드바 ───────────────────────────────────────────────────────
-persona_default = load_fixture("persona_kim.json")
+# ── 사이드바 — 전부 사용자 실입력 (가상 페르소나·샘플 매물 없음) ──────
 with st.sidebar:
-    st.header("👤 페르소나")
+    seoul_regions = list(SEOUL_LAWD_CD)
+    _gwanak = seoul_regions.index("관악구") if "관악구" in seoul_regions else 0
+
+    st.header("👤 내 정보")
+    _name = st.text_input("이름 (선택)", value="", placeholder="예: 홍길동")
     persona = {
-        "name": persona_default["name"],
-        "age": st.number_input("나이", 19, 45, persona_default["age"]),
-        "annual_income_krw": st.number_input(
-            "연소득(원)", 0, 200_000_000, persona_default["annual_income_krw"], step=1_000_000
-        ),
-        "assets_krw": st.number_input(
-            "가용자산(원)", 0, 500_000_000, persona_default["assets_krw"], step=1_000_000
-        ),
-        "expected_stay_years": st.number_input(
-            "거주 예정(년)", 1, 10, persona_default["expected_stay_years"]
-        ),
-        # 정책상품 자격 판정에 쓰이는 개인 요건 (룰 DB criteria와 1:1 매핑)
-        "is_homeless": st.checkbox("무주택 세대", value=persona_default.get("is_homeless", True)),
-        "is_household_head": st.checkbox("세대주", value=persona_default.get("is_household_head", True)),
-        "works_at_sme": st.checkbox("중소·중견기업 재직", value=persona_default.get("works_at_sme", False)),
+        "name": _name.strip() or "사용자",
+        "age": st.number_input("나이", 19, 60, 30),
+        "annual_income_krw": st.number_input("연소득(원)", 0, 300_000_000, 40_000_000, step=1_000_000),
+        "assets_krw": st.number_input("가용자산(원)", 0, 1_000_000_000, 30_000_000, step=1_000_000),
+        "expected_stay_years": st.number_input("거주 예정(년)", 1, 10, 4),
+        # 정책상품 자격 판정 요건 (룰 DB criteria와 1:1)
+        "is_homeless": st.checkbox("무주택 세대", value=True),
+        "is_household_head": st.checkbox("세대주", value=True),
+        "works_at_sme": st.checkbox("중소·중견기업 재직", value=False),
     }
+
     st.divider()
-    st.header("🏘️ 매물 입력")
-    registers = load_registers()
-    jeonse_names = [n for n, d in registers.items() if "jeonse_deposit_krw" in d.get("offer", {})]
-    wolse_names = [n for n, d in registers.items() if "monthly_rent_krw" in d.get("offer", {})]
-    input_mode = st.radio(
-        "전세 검토 매물 입력 방식", ["샘플 매물 선택", "등기부 PDF 업로드"]
-    )
+    st.header("🏠 전세 검토 매물")
+    input_mode = st.radio("입력 방식", ["등기부 PDF 업로드", "직접 입력"])
     uploaded_pdf = None
-    villa_name = None
-    if input_mode == "샘플 매물 선택":
-        villa_name = st.selectbox(
-            "전세 검토 매물",
-            jeonse_names,
-            index=jeonse_names.index("register_risky_villa.json") if "register_risky_villa.json" in jeonse_names else 0,
-            format_func=lambda n: registers[n]["property"]["address"],
-        )
-    else:
+    manual_villa = None
+    if input_mode == "등기부 PDF 업로드":
         uploaded_pdf = st.file_uploader("등기부등본 PDF", type=["pdf"])
-        # 실거래가 자동 조회 — 지역구 선택 후 MOLIT 실데이터 중위가로 시세 채움.
-        # 버튼을 위젯보다 먼저 처리해 session_state로 값 주입(Streamlit 정석 패턴).
-        seoul_regions = list(SEOUL_LAWD_CD)
-        st.session_state.setdefault("upload_market_man_widget", 18_500)
-        upload_region = st.selectbox(
-            "지역구 (실거래가 조회용)", seoul_regions,
-            index=seoul_regions.index("관악구"),
-        )
-        if st.button("📡 실거래가로 시세 자동 조회"):
+        st.session_state.setdefault("v_market_widget", 30_000)
+        v_region = st.selectbox("지역(구)", seoul_regions, index=_gwanak, key="v_region")
+        if st.button("📡 실거래가로 시세 조회", key="v_live_btn"):
             if not os.environ.get("MOLIT_API_KEY"):
-                st.warning("MOLIT_API_KEY가 필요합니다 (.env 또는 Secrets). 수동 입력하세요.")
+                st.warning("MOLIT_API_KEY가 필요합니다 (.env 또는 Secrets).")
             else:
                 try:
-                    live = live_market_price(upload_region, service_key=os.environ["MOLIT_API_KEY"])
-                    st.session_state["upload_market_man_widget"] = live["market_price_krw"] // 10_000
-                    st.session_state["onj_live_note"] = (
-                        f"✅ {upload_region} 최근 실거래 {live['n']}건 중위가 "
-                        f"{krw_man(live['market_price_krw'])} (기준 {live['source']['deal_ym']})"
+                    live = live_market_price(v_region, service_key=os.environ["MOLIT_API_KEY"])
+                    st.session_state["v_market_widget"] = live["market_price_krw"] // 10_000
+                    st.session_state["v_live_note"] = (
+                        f"✅ {v_region} 최근 실거래 {live['n']}건 중위가 {krw_man(live['market_price_krw'])}"
                     )
                 except Exception as exc:
-                    st.session_state["onj_live_note"] = f"⚠️ 자동 조회 실패: {exc}"
-        if st.session_state.get("onj_live_note"):
-            st.caption(st.session_state["onj_live_note"])
+                    st.session_state["v_live_note"] = f"⚠️ 조회 실패: {exc}"
+        if st.session_state.get("v_live_note"):
+            st.caption(st.session_state["v_live_note"])
         upload_market_man = st.number_input(
-            "시세 (만원)", min_value=1_000, max_value=500_000, step=500,
-            key="upload_market_man_widget",
-            help="등기부에는 시세가 없습니다 — 위 버튼으로 실거래가를 조회하거나 직접 입력하세요",
+            "시세 (만원)", 500, 500_000, step=500, key="v_market_widget",
+            help="등기부엔 시세가 없어 실거래가 조회 또는 직접 입력이 필요합니다",
         )
-        upload_deposit_man = st.number_input("전세 보증금 (만원)", 500, 300_000, 15_500, step=500)
-    officetel_name = st.selectbox(
-        "월세 대안 매물",
-        wolse_names,
-        format_func=lambda n: registers[n]["property"]["address"],
+        upload_deposit_man = st.number_input("전세 보증금 (만원)", 500, 400_000, 24_000, step=500)
+    else:
+        m_building = st.selectbox("건물 유형", ["빌라", "오피스텔", "아파트", "기타"], key="m_building")
+        m_region = st.selectbox("지역(구)", seoul_regions, index=_gwanak, key="m_region")
+        m_market = st.number_input("시세 (만원)", 500, 500_000, 30_000, step=500, key="m_market")
+        m_deposit = st.number_input("전세 보증금 (만원)", 500, 400_000, 24_000, step=500, key="m_deposit")
+        m_lien = st.number_input("선순위 근저당 채권최고액 (만원, 없으면 0)", 0, 500_000, 0, step=500, key="m_lien")
+        m_senior = st.number_input("선순위 임차보증금 (만원, 보통 0)", 0, 400_000, 0, step=500, key="m_senior")
+        m_insured = st.checkbox("전세보증보험 가입 가능", value=False, key="m_insured")
+        manual_villa = build_register_doc(
+            building_type=m_building, region=m_region, market_krw=int(m_market) * 10_000,
+            lien_krw=int(m_lien) * 10_000, senior_lease_krw=int(m_senior) * 10_000,
+            offer={"jeonse_deposit_krw": int(m_deposit) * 10_000,
+                   "sale_price_krw": int(m_market) * 10_000, "insured": m_insured},
+        )
+
+    st.divider()
+    st.header("🏠 월세 대안 (직접 입력)")
+    w_region = st.selectbox("지역(구)", seoul_regions, index=_gwanak, key="w_region")
+    w_building = st.selectbox("건물 유형", ["오피스텔", "빌라", "아파트", "기타"], key="w_building")
+    w_market = st.number_input("시세 (만원)", 500, 500_000, 20_000, step=500, key="w_market")
+    w_deposit = st.number_input("보증금 (만원)", 0, 100_000, 1_000, step=100, key="w_deposit")
+    w_rent = st.number_input("월세 (만원/월)", 5, 500, 65, step=5, key="w_rent")
+    manual_officetel = build_register_doc(
+        building_type=w_building, region=w_region, market_krw=int(w_market) * 10_000,
+        offer={"wolse_deposit_krw": int(w_deposit) * 10_000,
+               "monthly_rent_krw": int(w_rent) * 10_000, "insured": False},
     )
+
     st.divider()
     api_llm = default_llm()
     _provider = {"GeminiLLM": "Gemini API 연결됨", "AnthropicLLM": "Anthropic API 연결됨"}
     st.caption("🔌 LLM: " + _provider.get(type(api_llm).__name__, "오프라인 데모 (MockLLM)"))
 
-# ── 전세 검토 매물 결정 (샘플 vs 업로드) ────────────────────────────
+# ── 전세 매물 결정 (PDF 업로드 or 직접 입력) — 샘플·가상 없음 ─────────
 villa = None
+parse_error = None
 if input_mode == "등기부 PDF 업로드":
-    if uploaded_pdf is None:
-        st.info("👈 사이드바에서 등기부등본 PDF를 올리면 실제 매물 분석이 시작됩니다. 그 전까지는 샘플(위험 빌라)을 표시합니다.")
-    elif api_llm is None:
-        st.warning("PDF 파싱에는 LLM 키가 필요합니다 — `.env` 또는 Streamlit Secrets에 `GEMINI_API_KEY`를 설정하세요. 샘플 매물로 대체 표시합니다.")
-    else:
-        try:
-            villa = parse_uploaded_register(
-                uploaded_pdf.getvalue(),
-                int(upload_market_man) * 10_000,
-                int(upload_deposit_man) * 10_000,
-            )
-            st.success(f"등기부 파싱 완료: {villa['property']['address']} — 아래 결과는 업로드 매물 기준입니다.")
-        except ExtractionInvalid as exc:
-            st.error(f"추출 결과가 스키마 게이트에서 차단됐습니다 (하위 레이어 전달 금지 원칙): {exc.errors[:3]}")
-        except ValueError as exc:
-            st.error(f"PDF 처리 실패: {exc}")
-        except Exception as exc:  # LLM API 오류 등 — 데모가 죽지 않게 폴백
-            st.error(f"파싱 중 오류: {type(exc).__name__}: {exc}")
-if villa is None:
-    villa = registers[villa_name or "register_risky_villa.json"]
+    if uploaded_pdf is not None:
+        if api_llm is None:
+            parse_error = "PDF 파싱에는 LLM 키가 필요합니다 (.env/Secrets의 GEMINI_API_KEY). 또는 '직접 입력'을 쓰세요."
+        else:
+            try:
+                villa = parse_uploaded_register(
+                    uploaded_pdf.getvalue(),
+                    int(upload_market_man) * 10_000,
+                    int(upload_deposit_man) * 10_000,
+                )
+            except ExtractionInvalid as exc:
+                parse_error = f"등기부 추출이 스키마 게이트에서 차단됐습니다: {exc.errors[:3]}"
+            except ValueError as exc:
+                parse_error = f"PDF 처리 실패: {exc}"
+            except Exception as exc:  # LLM 오류 등 — 앱이 죽지 않게
+                parse_error = f"파싱 오류: {type(exc).__name__}: {exc}"
+else:
+    villa = manual_villa
 
-officetel = registers[officetel_name]
+officetel = manual_officetel
 model = risk_model()
+
+# 아직 실제 매물 정보가 없으면 빈 상태 안내 후 정지 (가상 데이터로 채우지 않음)
+if villa is None:
+    if parse_error:
+        st.error(parse_error)
+    st.info(
+        "👈 왼쪽에서 **등기부등본 PDF를 업로드**하고 시세를 입력하면 분석이 시작됩니다.\n\n"
+        "등기부가 없으면 입력 방식을 **'직접 입력'**으로 바꿔 시세·보증금·근저당을 직접 넣어도 됩니다."
+    )
+    st.stop()
+
 report = run_comparison(persona=persona, villa_doc=villa, officetel_doc=officetel, model=model)
 
 # ── 히어로 ─────────────────────────────────────────────────────────
@@ -469,6 +555,24 @@ tab_compare, tab_eligibility, tab_whatif, tab_l0, tab_rag = st.tabs(
 
 # ── 탭 1: 3안 비교 ────────────────────────────────────────────────
 with tab_compare:
+    # 상단: 왼쪽=결론 요약 / 오른쪽=업로드·입력한 등기부 내용 정리
+    _sum_col, _reg_col = st.columns([1.5, 1])
+    with _sum_col:
+        st.markdown("#### 📊 결론")
+        st.markdown(
+            f"**{report['best']}**가 가장 유리 — 위험(기대손실)을 반영한 연간 실질비용 기준."
+        )
+        st.markdown(
+            f"- 전세 {krw_man(report['jeonse']['total'])} "
+            f"(명목 {krw_man(report['jeonse']['nominal'])} + 기대손실 {krw_man(report['jeonse']['e_loss'])})\n"
+            f"- 월세 {krw_man(report['wolse']['total'])}\n"
+            f"- 매수 {krw_man(report['buy']['total'])}"
+        )
+    with _reg_col:
+        with st.container(border=True):
+            render_register_panel(villa)
+    st.divider()
+
     cols = st.columns(3)
     for col, key in zip(cols, ("jeonse", "wolse", "buy")):
         option = report[key]
