@@ -9,13 +9,40 @@ from __future__ import annotations
 
 from jsonschema import Draft202012Validator
 
+# source_loc는 있으면 형식 검증하되 필수 아님 — 인용용 부가 정보(계산엔 불필요)
 _SOURCE_LOC = {
     "type": "object",
-    "required": ["page", "section", "entry_no"],
     "properties": {
         "page": {"type": "integer"},
         "section": {"type": "string"},
         "entry_no": {"type": "integer"},
+    },
+}
+
+# 등기 항목: '무엇인지(type)'만 필수. 실물 등기부에서 Gemini가 rank·cancelled·
+# source_loc을 항상 채우지는 못하므로 나머지는 모두 선택. 없으면 하위 코드가
+# 보수적 기본값(말소 안 됨 등)으로 처리한다.
+_GAP_ITEM = {
+    "type": "object",
+    "required": ["type"],
+    "properties": {
+        "rank": {"type": "integer"},
+        "type": {"type": "string"},
+        "date": {"type": "string"},
+        "cancelled": {"type": "boolean"},
+        "source_loc": _SOURCE_LOC,
+    },
+}
+_EUL_ITEM = {
+    "type": "object",
+    "required": ["type"],
+    "properties": {
+        "rank": {"type": "integer"},
+        "type": {"type": "string"},
+        "max_claim_krw": {"type": "integer", "minimum": 0},
+        "set_date": {"type": "string"},
+        "cancelled": {"type": "boolean"},
+        "source_loc": _SOURCE_LOC,
     },
 }
 
@@ -26,14 +53,16 @@ REGISTER_SCHEMA = {
     "properties": {
         "property": {
             "type": "object",
+            # 계산에 실제로 쓰는 것만 필수. building_type은 enum 제거(실물은
+            # '다세대주택'·'공동주택' 등 다양) — _auction_rate가 미지 유형을 폴백 처리.
             "required": ["address", "building_type", "market_price_krw", "price_source"],
             "properties": {
                 "address": {"type": "string", "minLength": 1},
-                "building_type": {"enum": ["빌라", "오피스텔", "아파트", "기타"]},
+                "building_type": {"type": "string", "minLength": 1},
                 "market_price_krw": {"type": "integer", "minimum": 0},
                 "price_source": {
                     "type": "object",
-                    "required": ["api", "queried_at"],
+                    "required": ["queried_at"],
                     "properties": {
                         "api": {"type": "string"},
                         "queried_at": {"type": "string"},
@@ -43,44 +72,13 @@ REGISTER_SCHEMA = {
         },
         "register": {
             "type": "object",
-            "required": ["title_section", "gap_section", "eul_section", "senior_lease_deposits_krw"],
+            # 계산 대상 2섹션만 필수. title_section·senior_lease_deposits_krw는
+            # 선택(senior_claims가 .get으로 안전 처리).
+            "required": ["gap_section", "eul_section"],
             "properties": {
-                "title_section": {
-                    "type": "object",
-                    "required": ["owner"],
-                    "properties": {"owner": {"type": "string"}},
-                },
-                "gap_section": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "required": ["rank", "type", "date", "cancelled", "source_loc"],
-                        "properties": {
-                            "rank": {"type": "integer"},
-                            "type": {"type": "string"},
-                            "date": {"type": "string"},
-                            "cancelled": {"type": "boolean"},
-                            "source_loc": _SOURCE_LOC,
-                        },
-                    },
-                },
-                "eul_section": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        # max_claim_krw·set_date는 선택 — 전세권·임차권 등 채권최고액이
-                        # 없는 을구 등기가 실존하며, 파서 지침은 "모르면 비워라"다.
-                        "required": ["rank", "type", "cancelled", "source_loc"],
-                        "properties": {
-                            "rank": {"type": "integer"},
-                            "type": {"type": "string"},
-                            "max_claim_krw": {"type": "integer", "minimum": 0},
-                            "set_date": {"type": "string"},
-                            "cancelled": {"type": "boolean"},
-                            "source_loc": _SOURCE_LOC,
-                        },
-                    },
-                },
+                "title_section": {"type": "object"},
+                "gap_section": {"type": "array", "items": _GAP_ITEM},
+                "eul_section": {"type": "array", "items": _EUL_ITEM},
                 "senior_lease_deposits_krw": {"type": "integer", "minimum": 0},
             },
         },
@@ -119,9 +117,11 @@ def senior_claims(register: dict) -> int:
 
     채권최고액 기준(실채권 아님)의 보수적 추정 — 한계는 리포트에 명시한다.
     """
+    # cancelled 누락 시 '말소 안 됨'으로 보수적 처리(위험 과소평가 방지).
+    # senior_lease_deposits_krw 누락 시 0. 실물 추출의 필드 결손에 안전.
     liens = sum(
         entry.get("max_claim_krw") or 0
-        for entry in register["eul_section"]
-        if not entry["cancelled"]
+        for entry in register.get("eul_section", [])
+        if not entry.get("cancelled", False)
     )
-    return liens + register["senior_lease_deposits_krw"]
+    return liens + (register.get("senior_lease_deposits_krw") or 0)

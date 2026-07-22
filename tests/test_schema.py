@@ -30,11 +30,18 @@ class TestValidateExtraction:
         errors = validate_extraction(doc)
         assert errors and "market_price_krw" in " ".join(errors)
 
-    def test_eul_entry_without_source_loc_fails(self, load_fixture):
+    def test_eul_entry_without_source_loc_now_passes(self, load_fixture):
+        # 실물 대응: source_loc는 인용용 부가 정보라 선택 — 없어도 게이트 통과.
+        # (계산에 쓰는 채권최고액·말소여부만 게이트가 막는다)
         doc = copy.deepcopy(load_fixture("register_risky_villa.json"))
         del doc["register"]["eul_section"][0]["source_loc"]
-        errors = validate_extraction(doc)
-        assert errors and "source_loc" in " ".join(errors)
+        assert validate_extraction(doc) == []
+
+    def test_eul_entry_without_type_fails(self, load_fixture):
+        # type(무엇인지)은 필수 — 없으면 차단
+        doc = copy.deepcopy(load_fixture("register_risky_villa.json"))
+        del doc["register"]["eul_section"][0]["type"]
+        assert validate_extraction(doc)
 
     def test_missing_price_queried_at_fails(self, load_fixture):
         # 데이터 소스에는 조회 기준일이 반드시 있어야 한다 (CLAUDE.md 컨벤션)
