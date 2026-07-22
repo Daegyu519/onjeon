@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS fetched_months (
 );
 CREATE TABLE IF NOT EXISTS deal_cache (
   region_code TEXT, building_type TEXT, deal_kind TEXT, ym TEXT,
-  deal_date TEXT NOT NULL, pyeong_krw INTEGER NOT NULL
+  deal_date TEXT NOT NULL, pyeong_krw INTEGER NOT NULL,
+  dong TEXT, jibun TEXT, area_m2 REAL
 );
 CREATE INDEX IF NOT EXISTS idx_deal_lookup
   ON deal_cache (region_code, building_type, deal_kind, ym);
@@ -47,8 +48,12 @@ def save_month(conn, region, btype, kind, ym, deals, queried_at) -> None:
         (region, btype, kind, ym),
     )
     conn.executemany(
-        "INSERT INTO deal_cache VALUES (?,?,?,?,?,?)",
-        [(region, btype, kind, ym, d["deal_date"], d["pyeong_krw"]) for d in deals],
+        "INSERT INTO deal_cache VALUES (?,?,?,?,?,?,?,?,?)",
+        [
+            (region, btype, kind, ym, d["deal_date"], d["pyeong_krw"],
+             d.get("dong"), d.get("jibun"), d.get("area_m2"))
+            for d in deals
+        ],
     )
     conn.commit()
 
@@ -58,9 +63,12 @@ def load_deals(conn, region, btype, kind, months) -> list[dict]:
         return []
     qs = ",".join("?" * len(months))
     rows = conn.execute(
-        f"SELECT deal_date, pyeong_krw FROM deal_cache "
+        f"SELECT deal_date, pyeong_krw, dong, jibun, area_m2 FROM deal_cache "
         f"WHERE region_code=? AND building_type=? AND deal_kind=? AND ym IN ({qs}) "
         f"ORDER BY deal_date",
         (region, btype, kind, *months),
     ).fetchall()
-    return [{"deal_date": d, "pyeong_krw": p} for d, p in rows]
+    return [
+        {"deal_date": d, "pyeong_krw": p, "dong": dong, "jibun": jibun, "area_m2": area}
+        for d, p, dong, jibun, area in rows
+    ]
