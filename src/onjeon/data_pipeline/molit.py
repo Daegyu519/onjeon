@@ -39,6 +39,7 @@ _TAGS = {
     "day": ("dealDay", "일"),
     "dong": ("umdNm", "법정동"),
     "build_year": ("buildYear", "건축년도"),
+    "jibun": ("jibun", "지번"),
 }
 
 # 전월세(보증금·월세) 응답 태그 — 신형(영문)·구형(국문) 모두 수용
@@ -50,6 +51,7 @@ _RENT_TAGS = {
     "month": ("dealMonth", "월"),
     "day": ("dealDay", "일"),
     "dong": ("umdNm", "법정동"),
+    "jibun": ("jibun", "지번"),
 }
 
 ENDPOINT_BASE = "https://apis.data.go.kr/1613000"
@@ -90,6 +92,7 @@ def parse_trades(xml_text: str) -> list[dict]:
                 "deal_date": f"{year}-{int(month):02d}-{int(day):02d}",
                 "dong": _find(item, "dong"),
                 "build_year": int(_find(item, "build_year") or 0),
+                "jibun": _find(item, "jibun"),
             }
         )
     return trades
@@ -116,6 +119,7 @@ def parse_rents(xml_text: str) -> list[dict]:
                 "area_m2": float(_find_rent(item, "area") or 0),
                 "deal_date": f"{year}-{int(month):02d}-{int(day):02d}",
                 "dong": _find_rent(item, "dong"),
+                "jibun": _find_rent(item, "jibun"),
             }
         )
     return rents
@@ -276,10 +280,11 @@ def fetch_deals(
     http_get=requests.get,
     retry_wait=None,
 ) -> list[dict]:
-    """용도별(apt/rh/offi) 실거래가 → 정규화 {amount_krw, area_m2, deal_date}.
+    """용도별(apt/rh/offi) 실거래가 → 정규화 {amount_krw, area_m2, deal_date, dong, jibun}.
 
     deal_kind='trade': 매매금액. deal_kind='jeonse': 전월세 응답 중 월세금 0
     (=전세)만 걸러 보증금액을 amount_krw로 반환한다(월세 매물은 제외).
+    dong/jibun은 매물단위(건물) 시세 필터링용 — parse_trades/parse_rents의 값을 그대로 전달.
     """
     kind = "trade" if deal_kind == "trade" else "rent"
     xml_text = _fetch_xml(
@@ -292,11 +297,23 @@ def fetch_deals(
     )
     if deal_kind == "trade":
         return [
-            {"amount_krw": t["price_krw"], "area_m2": t["area_m2"], "deal_date": t["deal_date"]}
+            {
+                "amount_krw": t["price_krw"],
+                "area_m2": t["area_m2"],
+                "deal_date": t["deal_date"],
+                "dong": t["dong"],
+                "jibun": t["jibun"],
+            }
             for t in parse_trades(xml_text)
         ]
     return [
-        {"amount_krw": r["deposit_krw"], "area_m2": r["area_m2"], "deal_date": r["deal_date"]}
+        {
+            "amount_krw": r["deposit_krw"],
+            "area_m2": r["area_m2"],
+            "deal_date": r["deal_date"],
+            "dong": r["dong"],
+            "jibun": r["jibun"],
+        }
         for r in parse_rents(xml_text)
         if r["monthly_rent_krw"] == 0
     ]
