@@ -28,10 +28,11 @@ def get_cache():
 
 
 @app.get("/api/market-trends")
-def get_market_trends(region: str, buildingType: str, period: str, cache=Depends(get_cache)):
+def get_market_trends(region: str, buildingType: str, period: str, cache=Depends(get_cache),
+                      dong: str | None = None, jibun: str | None = None):
     try:
         return market_trends(region, buildingType, period, cache=cache,
-                             queried_at=date.today().isoformat())
+                             queried_at=date.today().isoformat(), dong=dong, jibun=jibun)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
