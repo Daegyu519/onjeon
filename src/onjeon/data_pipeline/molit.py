@@ -41,6 +41,31 @@ _TAGS = {
     "build_year": ("buildYear", "건축년도"),
 }
 
+# 전월세(보증금·월세) 응답 태그 — 신형(영문)·구형(국문) 모두 수용
+_RENT_TAGS = {
+    "deposit": ("deposit", "보증금액", "보증금"),
+    "monthly": ("monthlyRent", "월세금액", "월세"),
+    "area": ("excluUseAr", "전용면적"),
+    "year": ("dealYear", "년"),
+    "month": ("dealMonth", "월"),
+    "day": ("dealDay", "일"),
+    "dong": ("umdNm", "법정동"),
+}
+
+ENDPOINT_BASE = "https://apis.data.go.kr/1613000"
+# [확인] apt/offi 매매·전월세 오퍼레이션 ID — 실키로 검증 전. rh(연립다세대) trade는 기존 검증됨(DEFAULT_ENDPOINT).
+BUILDING_OPS = {
+    "apt": {"trade": "RTMSDataSvcAptTradeDev", "rent": "RTMSDataSvcAptRent"},
+    "rh": {"trade": "RTMSDataSvcRHTrade", "rent": "RTMSDataSvcRHRent"},
+    "offi": {"trade": "RTMSDataSvcOffiTrade", "rent": "RTMSDataSvcOffiRent"},
+}
+
+
+def deal_endpoint(building_type: str, kind: str) -> str:
+    """(용도, trade|rent) → 실거래가 오퍼레이션 URL. building_type: apt/rh/offi."""
+    op = BUILDING_OPS[building_type][kind]
+    return f"{ENDPOINT_BASE}/{op}/get{op}"
+
 
 def _find(item: ET.Element, key: str) -> str:
     for tag in _TAGS[key]:
@@ -68,6 +93,32 @@ def parse_trades(xml_text: str) -> list[dict]:
             }
         )
     return trades
+
+
+def _find_rent(item: ET.Element, key: str) -> str:
+    for tag in _RENT_TAGS[key]:
+        node = item.find(tag)
+        if node is not None and node.text:
+            return node.text.strip()
+    return ""
+
+
+def parse_rents(xml_text: str) -> list[dict]:
+    """전월세 응답 XML → 목록. 보증금/월세 '30,000'(만원) → 원 정수. 월세 0이면 전세."""
+    root = ET.fromstring(xml_text)
+    rents = []
+    for item in root.iter("item"):
+        year, month, day = _find_rent(item, "year"), _find_rent(item, "month"), _find_rent(item, "day")
+        rents.append(
+            {
+                "deposit_krw": int(_find_rent(item, "deposit").replace(",", "") or 0) * 10_000,
+                "monthly_rent_krw": int(_find_rent(item, "monthly").replace(",", "") or 0) * 10_000,
+                "area_m2": float(_find_rent(item, "area") or 0),
+                "deal_date": f"{year}-{int(month):02d}-{int(day):02d}",
+                "dong": _find_rent(item, "dong"),
+            }
+        )
+    return rents
 
 
 def median_price_krw(trades: list[dict]) -> int:
@@ -128,21 +179,19 @@ def live_market_price(
     }
 
 
-def fetch_trades(
+def _fetch_xml(
     lawd_cd: str,
     deal_ym: str,
+    endpoint: str,
     *,
-    service_key: str | None = None,
-    endpoint: str = DEFAULT_ENDPOINT,
-    http_get=requests.get,
-    retry_wait=None,
-) -> dict:
-    """실거래가 조회. 반환에 조회 기준 메타데이터(source)를 반드시 포함한다.
+    service_key: str | None,
+    http_get,
+    retry_wait,
+) -> str:
+    """실거래가 원본 XML 문자열 반환(요청·재시도·키 마스킹 공통 로직).
 
-    lawd_cd: 법정동 시군구 코드 5자리 (예: 관악구 11620)
-    deal_ym: 계약년월 YYYYMM
-    retry_wait: tenacity wait 전략 주입 (기본 지수 백오프 multiplier=0.5,
-        테스트는 wait_none()으로 대기 없이 검증)
+    fetch_trades·fetch_deals가 공유하는 내부 함수. 일시 장애(Timeout·
+    ConnectionError·HTTP 5xx)만 재시도하며(_is_retryable), 4xx는 즉시 실패.
     """
     key = service_key or os.environ.get("MOLIT_API_KEY")
     if not key:
@@ -175,8 +224,29 @@ def fetch_trades(
         before_sleep=_warn_before_retry,
         reraise=True,  # 소진 시 RetryError 대신 원래 예외를 그대로 던진다
     )
-    response = retryer(_request)
-    trades = parse_trades(response.text)
+    return retryer(_request).text
+
+
+def fetch_trades(
+    lawd_cd: str,
+    deal_ym: str,
+    *,
+    service_key: str | None = None,
+    endpoint: str = DEFAULT_ENDPOINT,
+    http_get=requests.get,
+    retry_wait=None,
+) -> dict:
+    """실거래가 조회. 반환에 조회 기준 메타데이터(source)를 반드시 포함한다.
+
+    lawd_cd: 법정동 시군구 코드 5자리 (예: 관악구 11620)
+    deal_ym: 계약년월 YYYYMM
+    retry_wait: tenacity wait 전략 주입 (기본 지수 백오프 multiplier=0.5,
+        테스트는 wait_none()으로 대기 없이 검증)
+    """
+    xml_text = _fetch_xml(
+        lawd_cd, deal_ym, endpoint, service_key=service_key, http_get=http_get, retry_wait=retry_wait
+    )
+    trades = parse_trades(xml_text)
     queried_at = date.today().isoformat()
     logger.info(
         "실거래가 조회 성공 lawd_cd=%s deal_ym=%s 건수=%d queried_at=%s",
@@ -194,6 +264,42 @@ def fetch_trades(
             "queried_at": queried_at,
         },
     }
+
+
+def fetch_deals(
+    lawd_cd: str,
+    ym: str,
+    building_type: str,
+    deal_kind: str,
+    *,
+    service_key: str | None = None,
+    http_get=requests.get,
+    retry_wait=None,
+) -> list[dict]:
+    """용도별(apt/rh/offi) 실거래가 → 정규화 {amount_krw, area_m2, deal_date}.
+
+    deal_kind='trade': 매매금액. deal_kind='jeonse': 전월세 응답 중 월세금 0
+    (=전세)만 걸러 보증금액을 amount_krw로 반환한다(월세 매물은 제외).
+    """
+    kind = "trade" if deal_kind == "trade" else "rent"
+    xml_text = _fetch_xml(
+        lawd_cd,
+        ym,
+        deal_endpoint(building_type, kind),
+        service_key=service_key,
+        http_get=http_get,
+        retry_wait=retry_wait,
+    )
+    if deal_kind == "trade":
+        return [
+            {"amount_krw": t["price_krw"], "area_m2": t["area_m2"], "deal_date": t["deal_date"]}
+            for t in parse_trades(xml_text)
+        ]
+    return [
+        {"amount_krw": r["deposit_krw"], "area_m2": r["area_m2"], "deal_date": r["deal_date"]}
+        for r in parse_rents(xml_text)
+        if r["monthly_rent_krw"] == 0
+    ]
 
 
 def fetch_period(
