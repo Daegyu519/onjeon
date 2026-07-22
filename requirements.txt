@@ -14,3 +14,4 @@ fastembed>=0.4
 pypdfium2>=4.30
 tenacity>=9.0
 pydantic>=2.7
+pdfplumber>=0.11
