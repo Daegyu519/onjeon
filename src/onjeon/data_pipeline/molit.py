@@ -55,7 +55,11 @@ _RENT_TAGS = {
 }
 
 ENDPOINT_BASE = "https://apis.data.go.kr/1613000"
-# [확인] apt/offi 매매·전월세 오퍼레이션 ID — 실키로 검증 전. rh(연립다세대) trade는 기존 검증됨(DEFAULT_ENDPOINT).
+# 실키 라이브 검증(2026-07-23, 관악구):
+#   rh/trade   → OK (연립다세대 매매, 기존 검증 재확인)
+#   rh/rent, apt/trade, apt/rent, offi/trade, offi/rent → 403 Forbidden
+#   = 오퍼레이션 ID는 존재 추정(403≠404)이나 이 서비스키가 해당 API 활용신청 미승인.
+#   data.go.kr에서 각 오퍼레이션 활용신청 승인 후 재검증 필요.
 BUILDING_OPS = {
     "apt": {"trade": "RTMSDataSvcAptTradeDev", "rent": "RTMSDataSvcAptRent"},
     "rh": {"trade": "RTMSDataSvcRHTrade", "rent": "RTMSDataSvcRHRent"},

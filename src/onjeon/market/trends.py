@@ -9,12 +9,18 @@
 
 from __future__ import annotations
 
+import logging
+
+import requests
+
 from onjeon.data_pipeline.molit import fetch_deals
 from onjeon.data_pipeline.regions import resolve_lawd_cd
 from onjeon.market import cache as cache_mod
 from onjeon.market.buckets import average_by_bucket, bucket_key
 from onjeon.market.period import granularity_for, period_months
 from onjeon.market.pyeong import price_per_pyeong
+
+logger = logging.getLogger("onjeon.market")
 
 _KINDS = {"mae_price": "trade", "jun_price": "jeonse"}
 
@@ -100,8 +106,16 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
         fetch_kw["http_get"] = http_get
 
     all_deals: dict[str, list[dict]] = {}
+    unavailable: list[str] = []
     for out_key, kind in _KINDS.items():
-        _ensure_cached(cache, region_code, building_type, kind, months, queried_at, **fetch_kw)
+        try:
+            _ensure_cached(cache, region_code, building_type, kind, months, queried_at, **fetch_kw)
+        except requests.RequestException as exc:
+            # 예: 전세/아파트 엔드포인트 활용신청 미승인(403). 전체를 죽이지 않고
+            # 해당 시리즈만 비우고 정직하게 unavailable로 표시한다.
+            logger.warning("시세 조회 실패 kind=%s btype=%s: %r — 해당 시리즈 생략",
+                           kind, building_type, exc)
+            unavailable.append(out_key)
         all_deals[out_key] = cache_mod.load_deals(cache, region_code, building_type, kind, months)
 
     level = _pick_level(all_deals["mae_price"], all_deals["jun_price"], dong, jibun, gran)
@@ -121,4 +135,5 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
         "jun_price": [series["jun_price"].get(d) for d in dates],
         "level": level,
         "level_label": _level_label(level, region, dong, jibun),
+        "unavailable": unavailable,
     }
