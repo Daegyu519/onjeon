@@ -55,10 +55,40 @@ def extract_fields(text: str) -> dict:
     }
 
 
+def _ocr_pages(path, max_pages: int = 5) -> str:
+    """스캔 PDF → 이미지 렌더(pypdfium2) → Tesseract OCR(kor). 무료·로컬.
+
+    tesseract 바이너리/kor 데이터/pytesseract 미설치면 예외 → 호출측이 NoTextLayer로 폴백.
+    """
+    import pypdfium2 as pdfium
+    import pytesseract
+
+    doc = pdfium.PdfDocument(path)
+    parts = []
+    for i in range(min(len(doc), max_pages)):
+        img = doc[i].render(scale=2).to_pil()
+        parts.append(pytesseract.image_to_string(img, lang="kor"))
+    return "\n".join(parts)
+
+
 def parse_register_pdf(path) -> dict:
-    """PDF 텍스트 추출 후 필드 파싱. 텍스트 없으면 NoTextLayer."""
+    """PDF 텍스트 추출 후 필드 파싱. 텍스트 레이어 없으면 무료 OCR 폴백(있을 때만).
+
+    OCR 결과는 저신뢰라 dict에 ocr=True를 달아 반환 — 호출측/화면이 사용자 확인을 받아야 한다.
+    OCR도 불가/실패하면 NoTextLayer(수동 입력 폴백).
+    """
     with pdfplumber.open(path) as pdf:
         text = "\n".join(page.extract_text() or "" for page in pdf.pages)
-    if not text.strip():
-        raise NoTextLayer("텍스트 레이어 없음(스캔 PDF로 추정) — 수동 입력 필요")
-    return extract_fields(text)
+    if text.strip():
+        return extract_fields(text)
+
+    try:
+        ocr_text = _ocr_pages(path)
+    except Exception as exc:  # tesseract 미설치 등
+        raise NoTextLayer("텍스트 레이어 없음 + OCR 불가(tesseract 미설치?) — 수동 입력") from exc
+    if not ocr_text.strip():
+        raise NoTextLayer("텍스트·OCR 모두 실패 — 수동 입력")
+    try:
+        return {**extract_fields(ocr_text), "ocr": True}
+    except ValueError as exc:
+        raise NoTextLayer(f"OCR은 됐으나 필드 추출 실패 — 수동 입력({exc})") from exc
