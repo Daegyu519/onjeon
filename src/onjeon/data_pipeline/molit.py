@@ -32,7 +32,7 @@ DEFAULT_ENDPOINT = "https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDa
 # 신형(영문)·구형(국문) 응답 태그 모두 수용
 _TAGS = {
     "amount": ("dealAmount", "거래금액"),
-    "area": ("excluUseAr", "전용면적"),
+    "area": ("excluUseAr", "totalFloorAr", "전용면적", "연면적"),
     "floor": ("floor", "층"),
     "year": ("dealYear", "년"),
     "month": ("dealMonth", "월"),
@@ -46,7 +46,7 @@ _TAGS = {
 _RENT_TAGS = {
     "deposit": ("deposit", "보증금액", "보증금"),
     "monthly": ("monthlyRent", "월세금액", "월세"),
-    "area": ("excluUseAr", "전용면적"),
+    "area": ("excluUseAr", "totalFloorAr", "전용면적", "연면적"),
     "year": ("dealYear", "년"),
     "month": ("dealMonth", "월"),
     "day": ("dealDay", "일"),
@@ -62,6 +62,8 @@ BUILDING_OPS = {
     "apt": {"trade": "RTMSDataSvcAptTrade", "rent": "RTMSDataSvcAptRent"},
     "rh": {"trade": "RTMSDataSvcRHTrade", "rent": "RTMSDataSvcRHRent"},
     "offi": {"trade": "RTMSDataSvcOffiTrade", "rent": "RTMSDataSvcOffiRent"},
+    # 단독/다가구(원룸·투룸) — 면적은 totalFloorAr(연면적), 매매는 건물 전체 거래
+    "sh": {"trade": "RTMSDataSvcSHTrade", "rent": "RTMSDataSvcSHRent"},
 }
 
 

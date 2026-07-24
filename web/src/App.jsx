@@ -11,6 +11,7 @@ const BUILDING_TYPES = [
   { v: 'apt', l: '아파트' },
   { v: 'rh', l: '빌라(연립·다세대)' },
   { v: 'offi', l: '오피스텔' },
+  { v: 'sh', l: '원룸·투룸(단독·다가구)' },
 ]
 const PERIODS = [
   { v: '1m', l: '1개월' },
@@ -19,7 +20,7 @@ const PERIODS = [
   { v: '3y', l: '3년' },
   { v: '5y', l: '5년' },
 ]
-const TYPE_LABEL = { apt: '아파트', rh: '빌라', offi: '오피스텔' }
+const TYPE_LABEL = { apt: '아파트', rh: '빌라', offi: '오피스텔', sh: '단독·다가구' }
 
 export default function App() {
   const [region, setRegion] = useState('관악구')
