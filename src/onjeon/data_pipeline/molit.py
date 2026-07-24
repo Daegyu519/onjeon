@@ -58,8 +58,8 @@ ENDPOINT_BASE = "https://apis.data.go.kr/1613000"
 # 실키 라이브 검증(2026-07-23, 관악구):
 #   rh/trade   → OK (연립다세대 매매, 기존 검증 재확인)
 #   rh/rent, apt/trade, apt/rent, offi/trade, offi/rent → 403 Forbidden
-#   = 오퍼레이션 ID는 존재 추정(403≠404)이나 이 서비스키가 해당 API 활용신청 미승인.
-#   data.go.kr에서 각 오퍼레이션 활용신청 승인 후 재검증 필요.
+#   = 오퍼레이션 ID 정상(403≠404, 엔드포인트 존재) + data.go.kr 문서로 확인(2026-07-24).
+#   같은 서비스키로 데이터셋별 활용신청만 하면 5종 전부 열림(링크: .env.example 참조).
 BUILDING_OPS = {
     "apt": {"trade": "RTMSDataSvcAptTradeDev", "rent": "RTMSDataSvcAptRent"},
     "rh": {"trade": "RTMSDataSvcRHTrade", "rent": "RTMSDataSvcRHRent"},
