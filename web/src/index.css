@@ -1,0 +1,249 @@
+:root {
+  --bg: #f2f4f6;
+  --card: #ffffff;
+  --text: #191f28;
+  --text-2: #6b7684;
+  --text-3: #8b95a1;
+  --border: #e5e8eb;
+  --accent: #3182f6; /* Toss 블루 — 액티브 상태 */
+  --mae: #00a84d; /* 매매선 (스펙) */
+  --jun: #0066ff; /* 전세선 (스펙) */
+  --up: #f04452; /* 상승 (한국 관례: 빨강) */
+  --down: #3182f6; /* 하락 (파랑) */
+  --sans: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', system-ui, sans-serif;
+
+  color-scheme: light;
+  font-family: var(--sans);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'tnum';
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+/* ── 헤더 ── */
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.brand .logo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.brand .tag {
+  font-size: 13px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+/* ── 매물 컨텍스트 카드 (시그니처) ── */
+.hero {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 22px 24px;
+  margin-top: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(49, 130, 246, 0.1);
+  padding: 5px 11px;
+  border-radius: 999px;
+  letter-spacing: -0.2px;
+}
+.level-badge .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.hero .context {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.hero .price {
+  margin-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.hero .price .num {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1.4px;
+}
+.hero .price .unit {
+  font-size: 16px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.hero .change {
+  font-size: 14px;
+  font-weight: 700;
+}
+.change.up {
+  color: var(--up);
+}
+.change.down {
+  color: var(--down);
+}
+.change.flat {
+  color: var(--text-3);
+}
+
+/* ── 컨트롤 ── */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+}
+.select {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--card)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238b95a1' d='M6 8 0 0h12z'/%3E%3C/svg%3E")
+    no-repeat right 12px center;
+  border-radius: 12px;
+  padding: 10px 32px 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.seg {
+  display: inline-flex;
+  background: #eaedf0;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+  margin-left: auto;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 7px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+  transition: all 0.15s ease;
+}
+.seg button.on {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px dashed var(--border);
+  background: var(--card);
+  color: var(--text-2);
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.upload:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.upload input {
+  display: none;
+}
+
+/* ── 차트 카드 ── */
+.chart-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 16px 12px 8px;
+  margin-top: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  min-height: 380px;
+}
+.legend {
+  display: flex;
+  gap: 16px;
+  padding: 8px 12px 0;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.legend i {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
+.legend .off {
+  opacity: 0.4;
+}
+
+/* ── 상태/주석 ── */
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 320px;
+  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 500;
+}
+.note {
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-3);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.note b {
+  color: var(--text-2);
+}
+
+@media (max-width: 560px) {
+  .hero .price .num {
+    font-size: 30px;
+  }
+  .seg {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+}
