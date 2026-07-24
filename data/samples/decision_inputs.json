@@ -1,0 +1,46 @@
+{
+  "note": "온전 의사결정 슬라이스 실입력 샘플 — 향후 POST /api/decision 입력 형태. 사용자가 직접 넣어 검증하는 용도. 기준 룰: rules/market_params(opportunity_rate=0.04, rir_cap=0.30).",
+  "unit": "모든 금액 원(₩) 정수. maintenance_krw=월 관리비, deposit_krw=보증금, monthly_rent_krw=월세.",
+  "as_of": "2026-07-24",
+  "samples": [
+    {
+      "label": "사회초년생 월세 (적정)",
+      "profile": {
+        "monthly_income_krw": 3000000,
+        "assets_krw": 20000000,
+        "age": 27,
+        "region": "관악구",
+        "is_homeless": true,
+        "works_at_sme": true
+      },
+      "listing": {"kind": "wolse", "deposit_krw": 20000000, "monthly_rent_krw": 550000, "maintenance_krw": 70000},
+      "expected_affordability": {"monthly_cost": 686667, "appropriate": 900000, "over_under_krw": -213333, "verdict": "적정"}
+    },
+    {
+      "label": "고월세 부담 (초과)",
+      "profile": {
+        "monthly_income_krw": 3000000,
+        "assets_krw": 15000000,
+        "age": 29,
+        "region": "마포구",
+        "is_homeless": true,
+        "works_at_sme": false
+      },
+      "listing": {"kind": "wolse", "deposit_krw": 10000000, "monthly_rent_krw": 950000, "maintenance_krw": 100000},
+      "expected_affordability": {"monthly_cost": 1083333, "appropriate": 900000, "over_under_krw": 183333, "verdict": "초과"}
+    },
+    {
+      "label": "고액 전세 (초과 — 보증금 기회비용)",
+      "profile": {
+        "monthly_income_krw": 3000000,
+        "assets_krw": 120000000,
+        "age": 31,
+        "region": "관악구",
+        "is_homeless": true,
+        "works_at_sme": true
+      },
+      "listing": {"kind": "jeonse", "deposit_krw": 300000000, "monthly_rent_krw": 0, "maintenance_krw": 50000},
+      "expected_affordability": {"monthly_cost": 1050000, "appropriate": 900000, "over_under_krw": 150000, "verdict": "초과"}
+    }
+  ]
+}
