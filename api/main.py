@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
 
+from onjeon.config import load_env
 from onjeon.data_pipeline.regions import resolve_lawd_cd
 from onjeon.decision import decide
 from onjeon.market.building import building_type_for_use
@@ -15,6 +16,7 @@ from onjeon.market.cache import open_cache
 from onjeon.market.trends import market_trends
 from onjeon.register.parse import NoTextLayer, parse_register_pdf
 
+load_env()  # .env의 MOLIT_API_KEY 등을 프로세스 환경으로 — 라이브 시세 조회용
 app = FastAPI(title="온전 API")
 _CACHE_PATH = Path("data/cache.db")
 
