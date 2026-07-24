@@ -42,3 +42,34 @@ class TestParseRegister:
         llm = MockLLM(["등기부를 읽을 수 없습니다"])
         with pytest.raises(ValueError):
             parse_register([b"img"], llm)
+
+    def test_null_values_from_real_llm_are_normalized(self):
+        # 실물 등기부에서 Gemini가 값을 null로 채우는 사고 — 게이트 전에 정리돼야 통과
+        extraction = {
+            "property": {
+                "address": "서울특별시 강남구 역삼동 000",
+                "building_type": "다세대주택",
+            },
+            "register": {
+                "title_section": {"owner": None},
+                "gap_section": [],
+                "eul_section": [
+                    {"type": "근저당권설정", "max_claim_krw": None, "cancelled": None, "source_loc": None},
+                ],
+                "senior_lease_deposits_krw": None,  # ← 신고된 차단 원인
+            },
+        }
+        llm = MockLLM([json.dumps(extraction, ensure_ascii=False)])
+        doc = parse_register([b"img"], llm, market_price_krw=300_000_000)
+        assert doc["property"]["market_price_krw"] == 300_000_000
+        # null이 정리돼 게이트 통과, senior_claims도 안전
+        from onjeon.l1.schema import senior_claims
+        assert senior_claims(doc["register"]) == 0  # 채권최고액 null → 0
+
+    def test_missing_register_sections_defaulted(self):
+        # register에 gap/eul 섹션 자체가 없어도 기본 []로 채워 통과
+        extraction = {"property": {"address": "서울시 관악구", "building_type": "빌라"},
+                      "register": {}}
+        llm = MockLLM([json.dumps(extraction, ensure_ascii=False)])
+        doc = parse_register([b"img"], llm, market_price_krw=150_000_000)
+        assert doc["register"]["eul_section"] == []

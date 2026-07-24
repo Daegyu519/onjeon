@@ -1,5 +1,5 @@
 {
-  "note": "온전 의사결정 슬라이스 실입력 샘플 — 향후 POST /api/decision 입력 형태. 사용자가 직접 넣어 검증하는 용도. 기준 룰: rules/market_params(opportunity_rate=0.04, rir_cap=0.30). expected=decide() 실제 출력(2026-07-24). eligible은 금리↑·한도↓ 랭킹순.",
+  "note": "온전 의사결정 슬라이스 실입력 샘플 — 향후 POST /api/decision 입력 형태. 사용자가 직접 넣어 검증하는 용도. 기준 룰: rules/market_params(opportunity_rate=0.04, rir_cap=0.30). expected=decide() 실제 출력(2026-07-24). eligible은 금리↑·한도↓ 랭킹순. listing.market_price_krw 있으면 임차vs매수 comparison 포함.",
   "unit": "모든 금액 원(₩) 정수. maintenance_krw=월 관리비, deposit_krw=보증금, monthly_rent_krw=월세.",
   "as_of": "2026-07-24",
   "samples": [
@@ -18,7 +18,8 @@
         "kind": "wolse",
         "deposit_krw": 20000000,
         "monthly_rent_krw": 550000,
-        "maintenance_krw": 70000
+        "maintenance_krw": 70000,
+        "market_price_krw": 250000000
       },
       "expected": {
         "affordability": {
@@ -34,7 +35,12 @@
           "청년월세 특별지원",
           "청년미래적금"
         ],
-        "ineligible": []
+        "ineligible": [],
+        "comparison": {
+          "rental": "월세 연 6278000원",
+          "buy": "매수 연 12525000원(예상매매가 250000000원)",
+          "cheaper": "월세"
+        }
       }
     },
     {
@@ -52,7 +58,8 @@
         "kind": "wolse",
         "deposit_krw": 10000000,
         "monthly_rent_krw": 950000,
-        "maintenance_krw": 100000
+        "maintenance_krw": 100000,
+        "market_price_krw": 400000000
       },
       "expected": {
         "affordability": {
@@ -69,7 +76,12 @@
         ],
         "ineligible": [
           "중소기업취업청년 전월세보증금대출"
-        ]
+        ],
+        "comparison": {
+          "rental": "월세 연 10100000원",
+          "buy": "매수 연 20125000원(예상매매가 400000000원)",
+          "cheaper": "월세"
+        }
       }
     },
     {
@@ -87,7 +99,8 @@
         "kind": "jeonse",
         "deposit_krw": 300000000,
         "monthly_rent_krw": 0,
-        "maintenance_krw": 50000
+        "maintenance_krw": 50000,
+        "market_price_krw": 350000000
       },
       "expected": {
         "affordability": {
@@ -104,7 +117,12 @@
         ],
         "ineligible": [
           "중소기업취업청년 전월세보증금대출"
-        ]
+        ],
+        "comparison": {
+          "rental": "전세 연 11100000원",
+          "buy": "매수 연 17075000원(예상매매가 350000000원)",
+          "cheaper": "전세"
+        }
       }
     }
   ]
