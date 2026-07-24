@@ -247,3 +247,223 @@ button {
     justify-content: space-between;
   }
 }
+
+/* ── 탭 ── */
+.tabs {
+  display: inline-flex;
+  background: #eaedf0;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+  margin-top: 14px;
+}
+.tabs button {
+  border: 0;
+  background: transparent;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.tabs button.on {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ── 진단 폼 ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.form-grid.listing {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.form-grid label,
+.checks .chk {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.form-grid label span {
+  color: var(--text-3);
+  font-weight: 600;
+  font-size: 11px;
+}
+.form-grid input,
+.form-grid select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  background: var(--card);
+}
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.checks {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.checks .chk {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+  font-weight: 600;
+}
+.submit {
+  width: 100%;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.submit:disabled {
+  opacity: 0.55;
+}
+.err {
+  margin-top: 12px;
+  color: var(--up);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── 적정 주거비 게이지 ── */
+.gauge-card .verdict {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+.verdict.ok {
+  color: var(--mae);
+  background: rgba(0, 168, 77, 0.1);
+}
+.verdict.over {
+  color: var(--up);
+  background: rgba(240, 68, 82, 0.1);
+}
+.gauge-num {
+  margin: 12px 0 10px;
+  font-size: 14px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+.gauge-num b {
+  color: var(--text);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.gauge-num .ok {
+  color: var(--mae);
+  font-weight: 700;
+}
+.gauge-num .over {
+  color: var(--up);
+  font-weight: 700;
+}
+.gauge {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: #eef1f4;
+  overflow: hidden;
+}
+.gauge-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+.gauge-fill.ok {
+  background: var(--mae);
+}
+.gauge-fill.over {
+  background: var(--up);
+}
+.gauge-cap {
+  position: absolute;
+  left: 66.6%;
+  top: -3px;
+  width: 2px;
+  height: 18px;
+  background: var(--text-3);
+  z-index: 2;
+}
+.gauge-legend {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+/* ── 금융지원 카드 ── */
+.fin-title {
+  margin: 4px 0 14px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+.fin-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.fin-card.ok {
+  border-color: rgba(0, 168, 77, 0.35);
+  background: rgba(0, 168, 77, 0.03);
+}
+.fin-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.badge-ok,
+.badge-no {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.badge-ok {
+  color: var(--mae);
+  background: rgba(0, 168, 77, 0.12);
+}
+.badge-no {
+  color: var(--text-3);
+  background: #eef1f4;
+}
+.fin-terms {
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.fin-gap {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-3);
+}

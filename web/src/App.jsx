@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
+import Decision from './Decision'
 
 const SEOUL_GU = [
   '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구',
@@ -32,6 +33,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [show, setShow] = useState({ mae: true, jun: true })
+  const [view, setView] = useState('trends')
 
   useEffect(() => {
     const q = new URLSearchParams({ region, buildingType, period })
@@ -152,6 +154,13 @@ export default function App() {
         <span className="tag">이 집, 주변 시세는 어떻게 흘러왔나</span>
       </div>
 
+      <div className="tabs">
+        <button className={view === 'trends' ? 'on' : ''} onClick={() => setView('trends')}>시세 흐름</button>
+        <button className={view === 'decide' ? 'on' : ''} onClick={() => setView('decide')}>내 조건 진단</button>
+      </div>
+
+      {view === 'decide' ? <Decision /> : (
+      <>
       <section className="hero">
         <span className="level-badge">
           <span className="dot" />
@@ -221,6 +230,8 @@ export default function App() {
         국토교통부 실거래가 기반. 값은 <b>평당가(만원)</b> = 거래금액 ÷ (전용면적 ÷ 3.3058).
         특정 호실이 아니라 <b>{data?.level_label || '해당 지역'}</b>의 같은 유형 거래 집계이며, 당월은 신고 지연으로 불완전할 수 있어요.
       </div>
+      </>
+      )}
     </div>
   )
 }
