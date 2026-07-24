@@ -23,6 +23,7 @@ export default function Decision() {
   const [res, setRes] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [prop, setProp] = useState(null)
   const set = (k) => (e) => {
     const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setF((s) => ({ ...s, [k]: v }))
@@ -62,6 +63,25 @@ export default function Decision() {
     }
   }
 
+  async function onRegister(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    setError(null)
+    try {
+      const r = await fetch('/api/register/parse', { method: 'POST', body: fd })
+      const b = await r.json()
+      if (!r.ok) throw new Error(b.detail || '등기부를 읽지 못했습니다')
+      setProp(b)
+      if (b.sigungu && SEOUL_GU.includes(b.sigungu)) setF((s) => ({ ...s, region: b.sigungu }))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      e.target.value = ''
+    }
+  }
+
   const a = res?.affordability
   const over = a && a.over_under_krw > 0
   // 게이지: 실제 주거비 / 적정선 비율(150% 상한으로 클램프)
@@ -70,6 +90,19 @@ export default function Decision() {
   return (
     <div className="decide">
       <section className="hero">
+        <div className="register-row">
+          <label className="upload">
+            📄 등기부로 자동채움
+            <input type="file" accept="application/pdf" onChange={onRegister} />
+          </label>
+          {prop && (
+            <span className="prop-ctx">
+              {prop.sigungu || ''} {prop.dong || ''} {prop.jibun || ''}
+              {prop.building_use ? ` · ${prop.building_use}` : ''}
+              {prop.exclusive_area_m2 ? ` · 전용 ${prop.exclusive_area_m2}㎡` : ''}
+            </span>
+          )}
+        </div>
         <div className="form-grid">
           <label>월소득 <span>만원</span><input type="number" value={f.income} onChange={set('income')} /></label>
           <label>보유자산 <span>만원</span><input type="number" value={f.assets} onChange={set('assets')} /></label>

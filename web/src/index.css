@@ -272,6 +272,23 @@ button {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
+/* ── 등기부 자동채움 행 ── */
+.register-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.prop-ctx {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(49, 130, 246, 0.08);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
 /* ── 진단 폼 ── */
 .form-grid {
   display: grid;
