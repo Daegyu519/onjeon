@@ -254,6 +254,52 @@ button {
   }
 }
 
+/* ── 등기부 인식 확인 게이트 ── */
+.confirm {
+  background: var(--card);
+  border: 1.5px solid var(--accent);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-top: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.confirm.ocr {
+  border-color: var(--up);
+  background: rgba(240, 68, 82, 0.03);
+}
+.confirm-h {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text);
+}
+.confirm.ocr .confirm-h {
+  color: var(--up);
+}
+.confirm-fields {
+  margin: 8px 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.confirm-btns {
+  display: flex;
+  gap: 8px;
+}
+.confirm-btns button {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-2);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.confirm-btns .ok {
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ── 탭 ── */
 .tabs {
   display: inline-flex;

@@ -34,6 +34,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [show, setShow] = useState({ mae: true, jun: true })
   const [view, setView] = useState('trends')
+  const [pendingReg, setPendingReg] = useState(null)
 
   useEffect(() => {
     const q = new URLSearchParams({ region, buildingType, period })
@@ -61,16 +62,22 @@ export default function App() {
       const r = await fetch('/api/register/parse', { method: 'POST', body: fd })
       const body = await r.json()
       if (!r.ok) throw new Error(body.detail || '등기부를 읽지 못했습니다')
-      setPropertyInfo(body)
-      if (body.building_type) setBuildingType(body.building_type)
-      if (body.sigungu && SEOUL_GU.includes(body.sigungu)) setRegion(body.sigungu)
-      setDong(body.dong || null)
-      setJibun(body.jibun || null)
+      setPendingReg(body) // 자동적용 X — 확인 후 적용(특히 OCR은 값이 틀릴 수 있음)
     } catch (err) {
       setError(err.message)
     } finally {
       e.target.value = ''
     }
+  }
+
+  function applyReg() {
+    const b = pendingReg
+    setPropertyInfo(b)
+    if (b.building_type) setBuildingType(b.building_type)
+    if (b.sigungu && SEOUL_GU.includes(b.sigungu)) setRegion(b.sigungu)
+    setDong(b.dong || null)
+    setJibun(b.jibun || null)
+    setPendingReg(null)
   }
 
   // 대표 평당가(매매) — 최근값과 기간 전 대비 등락
@@ -161,6 +168,21 @@ export default function App() {
 
       {view === 'decide' ? <Decision /> : (
       <>
+      {pendingReg && (
+        <div className={`confirm ${pendingReg.ocr ? 'ocr' : ''}`}>
+          <div className="confirm-h">
+            {pendingReg.ocr ? '📸 스캔 자동인식(OCR) — 숫자가 틀릴 수 있어요. 꼭 확인하세요' : '📄 등기부 인식 결과 — 맞나요?'}
+          </div>
+          <div className="confirm-fields">
+            {pendingReg.sigungu || '?'} {pendingReg.dong || ''} {pendingReg.jibun || ''} · {pendingReg.building_use || '?'}
+            {pendingReg.exclusive_area_m2 ? ` · 전용 ${pendingReg.exclusive_area_m2}㎡` : ''}
+          </div>
+          <div className="confirm-btns">
+            <button className="ok" onClick={applyReg}>맞아요, 적용</button>
+            <button onClick={() => setPendingReg(null)}>취소</button>
+          </div>
+        </div>
+      )}
       <section className="hero">
         <span className="level-badge">
           <span className="dot" />
