@@ -19,6 +19,7 @@ export default function Decision() {
     income: 280, assets: 2000, age: 27, region: '관악구',
     homeless: true, head: true, sme: true,
     kind: 'wolse', deposit: 2000, rent: 55, maint: 7, market: '',
+    jz: '', wsDep: '', wsRent: '',
   })
   const [res, setRes] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -48,6 +49,13 @@ export default function Decision() {
         monthly_rent_krw: f.kind === 'jeonse' ? 0 : Number(f.rent) * 10000,
         maintenance_krw: Number(f.maint) * 10000,
         ...(f.market ? { market_price_krw: Number(f.market) * 10000 } : {}),
+        ...(f.jz && f.wsRent
+          ? {
+              jeonse_deposit_krw: Number(f.jz) * 10000,
+              wolse_deposit_krw: Number(f.wsDep || 0) * 10000,
+              wolse_monthly_rent_krw: Number(f.wsRent) * 10000,
+            }
+          : {}),
       },
     }
     try {
@@ -131,6 +139,12 @@ export default function Decision() {
           <label>관리비 <span>만원</span><input type="number" value={f.maint} onChange={set('maint')} /></label>
           <label>예상 매매가 <span>만원·선택</span><input type="number" value={f.market} onChange={set('market')} placeholder="매수 비교용" /></label>
         </div>
+        <div className="form-grid listing">
+          <div className="checks" style={{ fontWeight: 800, color: 'var(--text-2)' }}>전세 vs 월세 비교 (선택·혜택 반영)</div>
+          <label>전세 보증금 <span>만원</span><input type="number" value={f.jz} onChange={set('jz')} placeholder="전세안" /></label>
+          <label>월세 보증금 <span>만원</span><input type="number" value={f.wsDep} onChange={set('wsDep')} placeholder="월세안" /></label>
+          <label>월세 <span>만원</span><input type="number" value={f.wsRent} onChange={set('wsRent')} placeholder="월세안" /></label>
+        </div>
         <button className="submit" onClick={submit} disabled={loading}>
           {loading ? '진단 중…' : '적정 주거비·지원 진단'}
         </button>
@@ -168,6 +182,27 @@ export default function Decision() {
           <div className="comp-verdict">
             연비용 유리 → <b>{res.comparison.cheaper}</b>
             <span> · 예상 매매가 {won(res.comparison.buy.market_price_krw)}원 기준(엔진 결정론)</span>
+          </div>
+        </section>
+      )}
+
+      {res?.jeonse_vs_wolse && (
+        <section className="hero comp-card">
+          <div className="comp-title">전세 vs 월세 · 연비용 (혜택 반영)</div>
+          <div className="comp-row">
+            <div className={`comp-cell ${res.jeonse_vs_wolse.cheaper === '전세' ? 'win' : ''}`}>
+              <span>전세{res.jeonse_vs_wolse.jeonse.loan_benefit ? ' · 대출혜택' : ''}</span>
+              <b>{won(res.jeonse_vs_wolse.jeonse.annual_krw)}원</b>
+            </div>
+            <div className={`comp-cell ${res.jeonse_vs_wolse.cheaper === '월세' ? 'win' : ''}`}>
+              <span>월세{res.jeonse_vs_wolse.wolse.monthly_support ? ' · 월세지원' : ''}</span>
+              <b>{won(res.jeonse_vs_wolse.wolse.annual_krw)}원</b>
+            </div>
+          </div>
+          <div className="comp-verdict">
+            혜택 반영 유리 → <b>{res.jeonse_vs_wolse.cheaper}</b>
+            {res.jeonse_vs_wolse.jeonse.loan_benefit && <span> · 전세 자격최저금리 {(res.jeonse_vs_wolse.jeonse.loan_rate * 100).toFixed(1)}% 적용</span>}
+            {res.jeonse_vs_wolse.wolse.monthly_support && <span> · 월세 청년월세지원 반영</span>}
           </div>
         </section>
       )}
