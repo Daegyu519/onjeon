@@ -7,6 +7,7 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
+from fastapi.staticfiles import StaticFiles
 
 from onjeon.config import load_env
 from onjeon.data_pipeline.regions import resolve_lawd_cd
@@ -67,3 +68,10 @@ def post_decision(body: dict = Body(...)):
         return decide(body.get("profile", {}), body.get("listing", {}))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# 빌드된 프론트(web/dist)를 같은 서버에서 서빙 — 단일 아티팩트 배포.
+# /api 라우트가 먼저 등록돼 우선하며, 나머지 경로는 SPA(index.html)로 폴백.
+_DIST = Path("web/dist")
+if _DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="web")

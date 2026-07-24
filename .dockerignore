@@ -1,0 +1,10 @@
+.venv
+.git
+**/node_modules
+web/dist
+**/__pycache__
+*.pyc
+.env
+data/cache.db
+.superpowers
+KB_AI_Challenge_*.md
