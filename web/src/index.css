@@ -3,7 +3,7 @@
   --card: #ffffff;
   --text: #191f28;
   --text-2: #6b7684;
-  --text-3: #8b95a1;
+  --text-3: #6b7684; /* WCAG AA: 4.6:1 on white (기존 #8b95a1은 2.9:1로 미달) */
   --border: #e5e8eb;
   --accent: #3182f6; /* Toss 블루 — 액티브 상태 */
   --mae: #00a84d; /* 매매선 (스펙) */
@@ -30,6 +30,12 @@ body {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+/* 키보드 포커스 링(a11y) — 0 specificity라 폼 인풋의 기존 focus는 유지 */
+:where(button, select, input):focus-visible,
+.upload:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .app {
