@@ -60,6 +60,42 @@ def _buy_vs_rent(listing, profile, mp, tax_rules) -> dict | None:
     }
 
 
+def compare_jeonse_wolse(profile, jeonse, wolse, *, products, market_params, tax_rules) -> dict:
+    """전세 vs 월세 연비용 비교 — 혜택 반영. jeonse={deposit_krw}, wolse={deposit_krw, monthly_rent_krw}.
+
+    전세: 자격 있는 전세대출 '최저금리'를 적용(없으면 시장금리). 월세: 청년월세지원 자격이면
+    연 240만(20만/월×12) 차감. engine 결정론 계산.
+    """
+    assets = profile["assets_krw"]
+    opp = market_params["opportunity_rate"]
+
+    # 전세 — 자격 있는 대출 최저금리
+    jz_elig = recommend(_eligibility_input(profile, jeonse), products)["eligible"]
+    rates = [e["terms"]["interest_rate"] for e in jz_elig
+             if e.get("product_type") == "loan" and e["terms"].get("interest_rate")]
+    jz_rate = min(rates) if rates else market_params["loan_rate_jeonse"]
+    jz_cost = engine.annual_cost_jeonse(
+        deposit=jeonse["deposit_krw"], user_assets=assets,
+        loan_rate=jz_rate, opportunity_rate=opp, e_loss=0,
+    )
+
+    # 월세 — 청년월세지원 자격이면 연 240만 차감(20만/월×12, rule: youth-monthly-rent-support)
+    ws_elig = recommend(_eligibility_input(profile, wolse), products)["eligible"]
+    has_support = any(e["rule_id"] == "youth-monthly-rent-support-2026-07" for e in ws_elig)
+    ws_before = engine.annual_cost_wolse(
+        deposit=wolse.get("deposit_krw", 0), monthly_rent=wolse["monthly_rent_krw"],
+        annual_income=profile["monthly_income_krw"] * 12, user_assets=assets,
+        loan_rate=market_params["loan_rate_jeonse"], opportunity_rate=opp, tax_rules=tax_rules,
+    )
+    support = 2_400_000 if has_support else 0
+    ws_cost = ws_before - support
+    return {
+        "jeonse": {"annual_krw": jz_cost, "loan_rate": jz_rate, "loan_benefit": bool(rates)},
+        "wolse": {"annual_krw": ws_cost, "before_support_krw": ws_before, "monthly_support": has_support},
+        "cheaper": "전세" if jz_cost < ws_cost else "월세",
+    }
+
+
 def decide(profile: dict, listing: dict, *, products=None, market_params=None, tax_rules=None) -> dict:
     """프로필+매물 → {affordability, recommendations, comparison?, sources}. 월소득 없으면 ValueError."""
     if not profile.get("monthly_income_krw"):
@@ -89,4 +125,13 @@ def decide(profile: dict, listing: dict, *, products=None, market_params=None, t
     comparison = _buy_vs_rent(listing, profile, market_params, tax_rules)
     if comparison:
         result["comparison"] = comparison
+    # 전세 vs 월세(혜택 반영) — 두 조건 다 주면 산출
+    jz, ws_rent = listing.get("jeonse_deposit_krw"), listing.get("wolse_monthly_rent_krw")
+    if jz and ws_rent:
+        result["jeonse_vs_wolse"] = compare_jeonse_wolse(
+            profile,
+            {"deposit_krw": jz},
+            {"deposit_krw": listing.get("wolse_deposit_krw", 0), "monthly_rent_krw": ws_rent},
+            products=products, market_params=market_params, tax_rules=tax_rules,
+        )
     return result
