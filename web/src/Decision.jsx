@@ -123,7 +123,9 @@ export default function Decision() {
           {res.recommendations.eligible.map((p) => (
             <div key={p.rule_id} className="fin-card ok">
               <div className="fin-head"><span className="badge-ok">자격</span>{p.product_name}</div>
-              <div className="fin-terms">{rate(p.terms)}{limit(p.terms)}</div>
+              <div className="fin-terms">
+                {p.product_type === 'loan' ? `${rate(p.terms)}${limit(p.terms)}` : (p.terms.note || '지원 상품')}
+              </div>
             </div>
           ))}
           {res.recommendations.ineligible.map((p) => (
