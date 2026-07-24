@@ -55,13 +55,11 @@ _RENT_TAGS = {
 }
 
 ENDPOINT_BASE = "https://apis.data.go.kr/1613000"
-# 실키 라이브 검증(2026-07-23, 관악구):
-#   rh/trade   → OK (연립다세대 매매, 기존 검증 재확인)
-#   rh/rent, apt/trade, apt/rent, offi/trade, offi/rent → 403 Forbidden
-#   = 오퍼레이션 ID 정상(403≠404, 엔드포인트 존재) + data.go.kr 문서로 확인(2026-07-24).
-#   같은 서비스키로 데이터셋별 활용신청만 하면 5종 전부 열림(링크: .env.example 참조).
+# 실키 라이브 검증(2026-07-25): 6종(아파트/연립다세대/오피스텔 × 매매/전월세) 전부 OK.
+# 주의: 아파트 매매는 기본 오퍼레이션 RTMSDataSvcAptTrade 사용(RH/Offi와 통일).
+#   상세판 ...AptTradeDev는 '상세 자료'라는 별개 데이터셋이라 별도 활용신청 필요 → 미사용.
 BUILDING_OPS = {
-    "apt": {"trade": "RTMSDataSvcAptTradeDev", "rent": "RTMSDataSvcAptRent"},
+    "apt": {"trade": "RTMSDataSvcAptTrade", "rent": "RTMSDataSvcAptRent"},
     "rh": {"trade": "RTMSDataSvcRHTrade", "rent": "RTMSDataSvcRHRent"},
     "offi": {"trade": "RTMSDataSvcOffiTrade", "rent": "RTMSDataSvcOffiRent"},
 }
