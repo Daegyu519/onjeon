@@ -484,3 +484,56 @@ button {
   line-height: 1.7;
   color: var(--text-3);
 }
+
+/* ── 임차 vs 매수 비교 카드 ── */
+.comp-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.comp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.comp-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+.comp-cell span {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.comp-cell b {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.comp-cell.win {
+  border-color: var(--mae);
+  background: rgba(0, 168, 77, 0.06);
+}
+.comp-cell.win b {
+  color: var(--mae);
+}
+.comp-verdict {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+.comp-verdict b {
+  color: var(--accent);
+}
+.comp-verdict span {
+  color: var(--text-3);
+  font-weight: 500;
+}

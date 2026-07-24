@@ -18,7 +18,7 @@ export default function Decision() {
   const [f, setF] = useState({
     income: 280, assets: 2000, age: 27, region: '관악구',
     homeless: true, head: true, sme: true,
-    kind: 'wolse', deposit: 2000, rent: 55, maint: 7,
+    kind: 'wolse', deposit: 2000, rent: 55, maint: 7, market: '',
   })
   const [res, setRes] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -47,6 +47,7 @@ export default function Decision() {
         deposit_krw: Number(f.deposit) * 10000,
         monthly_rent_krw: f.kind === 'jeonse' ? 0 : Number(f.rent) * 10000,
         maintenance_krw: Number(f.maint) * 10000,
+        ...(f.market ? { market_price_krw: Number(f.market) * 10000 } : {}),
       },
     }
     try {
@@ -128,6 +129,7 @@ export default function Decision() {
           <label>보증금 <span>만원</span><input type="number" value={f.deposit} onChange={set('deposit')} /></label>
           {f.kind === 'wolse' && <label>월세 <span>만원</span><input type="number" value={f.rent} onChange={set('rent')} /></label>}
           <label>관리비 <span>만원</span><input type="number" value={f.maint} onChange={set('maint')} /></label>
+          <label>예상 매매가 <span>만원·선택</span><input type="number" value={f.market} onChange={set('market')} placeholder="매수 비교용" /></label>
         </div>
         <button className="submit" onClick={submit} disabled={loading}>
           {loading ? '진단 중…' : '적정 주거비·지원 진단'}
@@ -147,6 +149,26 @@ export default function Decision() {
             <div className={`gauge-fill ${over ? 'over' : 'ok'}`} style={{ width: `${(pct / 150) * 100}%` }} />
           </div>
           <div className="gauge-legend">RIR {(a.rir_actual * 100).toFixed(0)}% · 적정 상한 {(a.rir_cap * 100).toFixed(0)}%</div>
+        </section>
+      )}
+
+      {res?.comparison && (
+        <section className="hero comp-card">
+          <div className="comp-title">임차 vs 매수 · 연 실질비용</div>
+          <div className="comp-row">
+            <div className={`comp-cell ${res.comparison.cheaper !== '매수' ? 'win' : ''}`}>
+              <span>{res.comparison.rental.kind}(임차)</span>
+              <b>{won(res.comparison.rental.annual_krw)}원</b>
+            </div>
+            <div className={`comp-cell ${res.comparison.cheaper === '매수' ? 'win' : ''}`}>
+              <span>매수</span>
+              <b>{won(res.comparison.buy.annual_krw)}원</b>
+            </div>
+          </div>
+          <div className="comp-verdict">
+            연비용 유리 → <b>{res.comparison.cheaper}</b>
+            <span> · 예상 매매가 {won(res.comparison.buy.market_price_krw)}원 기준(엔진 결정론)</span>
+          </div>
         </section>
       )}
 
