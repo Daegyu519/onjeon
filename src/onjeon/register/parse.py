@@ -9,8 +9,11 @@ import re
 
 import pdfplumber
 
+# '면적' 키워드가 있으면 우선, 없으면 아무 'N㎡' 숫자로 폴백(실제 등기부는 키워드 생략)
 _AREA_RE = re.compile(r"면적\s*([\d,]+\.\d+)\s*㎡")
-_USE_RE = re.compile(r"용도\s*([가-힣A-Za-z]+)")
+_AREA_FALLBACK_RE = re.compile(r"([\d,]+\.\d+)\s*㎡")
+# 건물용도 — '용도' 키워드 없이 유형명 직접 매칭(실제 양식엔 '다세대주택' 등만 표기)
+_USE_RE = re.compile(r"(오피스텔|아파트|연립주택|다세대주택|단독주택|다중주택|주상복합|근린생활시설)")
 _SIDO_RE = re.compile(r"(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|"
                       r"울산광역시|세종특별자치시|경기도|강원(?:특별자치)?도|충청북도|충청남도|"
                       r"전라북도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)")
@@ -26,7 +29,7 @@ class NoTextLayer(ValueError):
 
 def extract_fields(text: str) -> dict:
     """등기부 텍스트 → 필드. 전용면적은 필수(없으면 ValueError)."""
-    area_m = _AREA_RE.search(text)
+    area_m = _AREA_RE.search(text) or _AREA_FALLBACK_RE.search(text)
     if not area_m:
         raise ValueError("전용면적을 찾지 못했다 — 등기부 형식 확인 필요")
     sido = _SIDO_RE.search(text)
@@ -35,7 +38,9 @@ def extract_fields(text: str) -> dict:
     sigungu_val = next((t for t in _SIGUNGU_RE.findall(text) if t != sido_val), None)
     use = _USE_RE.search(text)
     road = _ROAD_RE.search(text)
-    dong_m = _DONG_RE.search(text)
+    # 동은 시군구 '뒤'에서 찾는다 — '성동구'의 '동' 오매칭 방지
+    after = text.find(sigungu_val) + len(sigungu_val) if sigungu_val and sigungu_val in text else 0
+    dong_m = _DONG_RE.search(text, after)
     dong_val = dong_m.group(0) if dong_m else None
     jibun_m = _JIBUN_RE.search(text, dong_m.end()) if dong_m else None
     jibun_val = jibun_m.group(0) if jibun_m else None
