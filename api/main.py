@@ -6,9 +6,10 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
 
 from onjeon.data_pipeline.regions import resolve_lawd_cd
+from onjeon.decision import decide
 from onjeon.market.building import building_type_for_use
 from onjeon.market.cache import open_cache
 from onjeon.market.trends import market_trends
@@ -55,3 +56,12 @@ async def post_register_parse(file: UploadFile, cache=Depends(get_cache)):
         except ValueError:
             building_type = None
     return {**fields, "region_code": region_code, "building_type": building_type}
+
+
+@app.post("/api/decision")
+def post_decision(body: dict = Body(...)):
+    """프로필+매물 → 적정 주거비 진단 + 청년 금융지원 추천."""
+    try:
+        return decide(body.get("profile", {}), body.get("listing", {}))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
