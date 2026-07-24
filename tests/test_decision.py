@@ -34,3 +34,17 @@ def test_high_income_disqualifies_sme():
 def test_missing_income_raises():
     with pytest.raises(ValueError):
         decide({"assets_krw": 1_000_000}, LISTING)
+
+
+def test_comparison_present_when_market_price_given():
+    out = decide(PROFILE, {**LISTING, "market_price_krw": 300_000_000})
+    assert "comparison" in out
+    c = out["comparison"]
+    assert c["rental"]["kind"] == "월세"
+    assert c["buy"]["market_price_krw"] == 300_000_000
+    assert c["cheaper"] in ("월세", "매수")
+
+
+def test_no_comparison_without_market_price():
+    # 예상 매매가 없으면 매수 비교를 만들지 않는다(허구 금지)
+    assert "comparison" not in decide(PROFILE, LISTING)
