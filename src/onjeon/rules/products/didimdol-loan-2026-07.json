@@ -1,0 +1,42 @@
+{
+  "rule_id": "didimdol-loan-2026-07",
+  "product_name": "내집마련 디딤돌대출",
+  "product_type": "loan",
+  "status": "active",
+  "version": "2026-07 기준",
+  "verified_at": "2026-07-24",
+  "verify_note": "2026-07-24 웹검증(주택도시기금 nhuf.molit.go.kr 상품안내/FAQ 교차확인, 대부분 HIGH): 무주택 세대주(세대원 전원 무주택), 부부합산 연소득 6,000만 이하(생애최초·2자녀 7,000만/신혼 8,500만 완화 [확인·미수집:가구유형]), 순자산 5.11억 이하(2026), 대상 주택가격 5억 이하(신혼·2자녀 6억). 금리 2.85~4.15%(소득·기간별), 한도 일반 2억/생애최초 2.4억/신혼 3.2억, LTV 70%(생애최초 80%). 나이 요건(만30세 미만 단독세대주 원칙 제외) [확인:LOW]. 주택가격 상한은 프로필 미수집이라 판정 제외.",
+  "source": {
+    "url": "https://nhuf.molit.go.kr/FP/FP05/FP0503/FP05030101.jsp",
+    "clause_refs": ["대출대상", "대출한도", "대출금리"]
+  },
+  "criteria": [
+    {
+      "field": "is_homeless", "op": "==", "value": true,
+      "clause": "대출대상 — 무주택 세대주(세대원 전원 무주택)",
+      "boundary_tests": [{"input": true, "expect": true}, {"input": false, "expect": false}]
+    },
+    {
+      "field": "is_household_head", "op": "==", "value": true,
+      "clause": "대출대상 — 세대주",
+      "boundary_tests": [{"input": true, "expect": true}, {"input": false, "expect": false}]
+    },
+    {
+      "field": "annual_income_krw", "op": "<=", "value": 60000000,
+      "clause": "대출대상 — 부부합산 연소득 6천만 이하(우대구간 완화 [확인])",
+      "boundary_tests": [{"input": 60000000, "expect": true}, {"input": 60000001, "expect": false}]
+    },
+    {
+      "field": "assets_krw", "op": "<=", "value": 511000000,
+      "clause": "대출대상 — 순자산 5.11억 이하(2026)",
+      "boundary_tests": [{"input": 511000000, "expect": true}, {"input": 511000001, "expect": false}]
+    }
+  ],
+  "terms": {
+    "interest_rate": 0.0285,
+    "interest_rate_note": "2.85~4.15% 소득·기간별 변동 [확인:구간표]",
+    "limit_krw": 200000000,
+    "note": "한도 일반 2억(생애최초 2.4억/신혼 3.2억), LTV 70%. 주택 구입자금."
+  },
+  "alternatives": ["청년전용 버팀목전세자금대출"]
+}

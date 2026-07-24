@@ -85,5 +85,7 @@
     "interest_rate": 0.012,
     "limit_krw": 100000000,
     "note": "금리 1.2%·한도 1억 (2026-07-18 검증). 일부 은행 판매중지 [확인]"
-  }
+  },
+  "status": "active",
+  "product_type": "loan"
 }

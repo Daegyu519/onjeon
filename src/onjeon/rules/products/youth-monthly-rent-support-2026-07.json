@@ -1,0 +1,36 @@
+{
+  "rule_id": "youth-monthly-rent-support-2026-07",
+  "product_name": "청년월세 특별지원",
+  "product_type": "subsidy",
+  "status": "active",
+  "version": "2026-07 기준",
+  "verified_at": "2026-07-24",
+  "verify_note": "2026-07-24 웹검증(정부24 gov.kr/서비스 161300000099, 복지로 교차, HIGH): 만19~34세·무주택·부모별도거주, 월 최대 20만원×최대 24개월(총 480만). 2022~ 한시→2026 계속사업 전환. 2026 신규 신청 2026-03-30~05-29 마감(현재 신규접수 창구 여부 [확인]). 소득요건(청년가구 중위 60%·원가구 중위 100%)·재산기준(청년 순자산 1.22억/원가구 4.7억)은 중위소득 원값 미확정이라 판정 제외 [확인]. 보증금/월세 상한 존재 여부 미확인 [확인]. 월세 매물에만 해당.",
+  "source": {
+    "url": "https://www.gov.kr/portal/service/serviceInfo/161300000099",
+    "clause_refs": ["지원대상", "지원내용"]
+  },
+  "criteria": [
+    {
+      "field": "age", "op": ">=", "value": 19,
+      "clause": "지원대상 — 만 19세 이상",
+      "boundary_tests": [{"input": 19, "expect": true}, {"input": 18, "expect": false}]
+    },
+    {
+      "field": "age", "op": "<=", "value": 34,
+      "clause": "지원대상 — 만 34세 이하",
+      "boundary_tests": [{"input": 34, "expect": true}, {"input": 35, "expect": false}]
+    },
+    {
+      "field": "is_homeless", "op": "==", "value": true,
+      "clause": "지원대상 — 무주택 청년",
+      "boundary_tests": [{"input": true, "expect": true}, {"input": false, "expect": false}]
+    }
+  ],
+  "terms": {
+    "interest_rate": null,
+    "limit_krw": 4800000,
+    "note": "지원(대출 아님): 월 최대 20만원 × 최대 24개월(총 480만). 소득·재산 요건 별도 [확인]. 월세 매물 대상."
+  },
+  "alternatives": []
+}

@@ -67,9 +67,9 @@ class TestRegisterDoc:
 
 
 class TestRuleDoc:
-    def test_both_product_rules_parse(self):
+    def test_all_product_rules_parse(self):
         products = load_products()
-        assert len(products) == 2
+        assert len(products) >= 2  # 상품은 늘어남 — 개수 고정 대신 전부 파싱·검증
         for raw in products:
             rule = RuleDoc.model_validate(raw)
             assert rule.rule_id == raw["rule_id"]

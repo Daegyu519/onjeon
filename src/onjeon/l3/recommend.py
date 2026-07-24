@@ -20,8 +20,11 @@ def recommend(profile: dict, products: list[dict]) -> dict:
     """profile을 각 상품 룰에 대조 → {eligible:[금리↑·한도↓ 랭킹], ineligible:[반증]}."""
     ranked, rejected = [], []
     for product in products:
+        if product.get("status") == "discontinued":
+            continue  # 종료 상품은 추천하지 않는다(staleness 방어)
         result = evaluate(profile, product)
         result["terms"] = product.get("terms", {})
+        result["product_type"] = product.get("product_type", "loan")
         (ranked if result["eligible"] else rejected).append(result)
     ranked.sort(key=_rank_key)
     return {"eligible": ranked, "ineligible": rejected}
