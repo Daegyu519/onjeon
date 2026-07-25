@@ -11,7 +11,8 @@ services:
     name: onjeon
     runtime: docker
     plan: free
-    dockerfilePath: ./Dockerfile
+    # Dockerfile은 리포 루트(rootDir 기본값)에 있으므로 경로 지정 불필요.
+    # Render가 자체 linux/amd64 인프라에서 직접 빌드하므로 맥(arm64)과 무관하다.
     healthCheckPath: /openapi.json
     envVars:
       # 공개 배포는 캐시만 읽고 국토부 API를 호출하지 않는다(요청당 최대 183회 →
