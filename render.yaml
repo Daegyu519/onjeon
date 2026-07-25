@@ -1,0 +1,23 @@
+# Render Blueprint — 온전 웹(FastAPI 단일 서버가 프론트+API 서빙).
+# HF Spaces 무료가 Docker Space를 막아(Static만 무료) 대안으로 채택.
+#
+# 사용: Render 대시보드 → New → Blueprint → 이 리포 선택 → Apply.
+#   이후 Environment에 MOLIT_API_KEY 추가(값은 여기 넣지 않는다 — sync:false).
+#
+# 무료 플랜 특성: 15분 유휴 후 슬립, 첫 요청이 30~50초 걸린다(이후 정상 속도).
+#   시연 직전에 한 번 열어 깨워두면 된다.
+services:
+  - type: web
+    name: onjeon
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /openapi.json
+    envVars:
+      # 공개 배포는 캐시만 읽고 국토부 API를 호출하지 않는다(요청당 최대 183회 →
+      # 인증 없는 공개 경로에서 운영자 키 쿼터가 소진되는 것을 막는다).
+      - key: ONJEON_PUBLIC_READONLY
+        value: "1"
+      # Render가 주입하는 PORT를 그대로 사용(Dockerfile CMD가 ${PORT}를 읽는다).
+      - key: MOLIT_API_KEY
+        sync: false # 대시보드에서 직접 입력 — 리포에 키를 남기지 않는다
