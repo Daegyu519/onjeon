@@ -62,13 +62,17 @@ def evaluate(index: ClauseIndex, golden: list[dict], top_k: int = 5) -> dict:
 
 
 def main() -> None:
+    from onjeon.config import load_env
     from onjeon.rag.documents import collect_documents
-    from onjeon.rag.embedder import HashEmbedder
 
-    index = ClauseIndex(location=":memory:", embedder=HashEmbedder())
+    # .env를 읽어야 ONJEON_EMBED_MODEL이 default_embedder()에 보인다 — 앱(app.py)과
+    # 같은 임베더로 측정하기 위한 필수 단계. 임베더를 여기서 주입하면 env가 무시돼
+    # docs/data-pipeline.md의 e5-large 실측치를 재현할 수 없다.
+    load_env()
+    index = ClauseIndex(location=":memory:")
     count = index.index_documents(collect_documents())
     report = evaluate(index, load_golden(), top_k=5)
-    print(f"코퍼스 {count}개 문서 · 골든셋 {report['n']}건 · HashEmbedder(폴백) 기준")
+    print(f"코퍼스 {count}개 문서 · 골든셋 {report['n']}건 · {type(index.embedder).__name__} 기준")
     print(f"recall@5 = {report['recall_at_k']:.2f}   MRR = {report['mrr']:.3f}")
     for row in report["per_query"]:
         mark = "hit " if row["hit"] else "MISS"

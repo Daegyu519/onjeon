@@ -71,6 +71,8 @@ idea/
 │   ├── data_pipeline/   ← 데이터 수집 (실거래가 API, 낙찰가율 룰 생성기)
 │   ├── rag/             ← 조항 색인 — Qdrant 하이브리드(dense+sparse RRF) + 골든셋 평가(eval.py)
 │   │                       인용·검색 전용, 판정 금지. 임베딩: ONJEON_EMBED_MODEL(로컬 e5-large 권장)
+│   │                       ⚠️ 배포 제품(api.main) 미포함 — app.py(Streamlit) 전용 연구 모듈.
+│   │                       배포 경로의 인용은 rules JSON의 clause → eligibility가 담당한다.
 │   ├── compare.py       ← 전 레이어 오케스트레이터 (UI·L4 공용, LLM 없음)
 │   ├── rules_io.py      ← 버전 태그 룰 DB 로더
 │   ├── l0/rule_pipeline.py  ← 공고 → 룰 JSON (추출/검증 LLM 분리 강제)
