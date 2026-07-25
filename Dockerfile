@@ -13,6 +13,11 @@ RUN npm run build
 # 2) 백엔드 + 정적 서빙
 FROM python:3.12-slim
 RUN useradd -m -u 1000 user
+# 스캔 등기부 OCR 폴백에 필요한 tesseract 바이너리+한국어 데이터.
+# pytesseract(파이썬 래퍼)만으론 동작하지 않아 이미지에 바이너리가 있어야 한다.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tesseract-ocr tesseract-ocr-kor \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

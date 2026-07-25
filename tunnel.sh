@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # 온전(穩全) — 로컬 실행 + cloudflared 무료 공개 URL 발급.
-#   시작:  ./tunnel.sh          (기본 포트 8501)
+#   시작:  ./tunnel.sh          (기본 포트 8000)
 #   종료:  ./tunnel.sh stop
 # 이 Mac이 켜져 있고 프로세스가 살아있는 동안 공개 URL이 유효하다 (계정 불필요).
+#
+# 공개하는 앱: FastAPI 단일 서버(api.main:app)가 web/dist 프론트 + /api를 한 포트에서
+# 서빙한다(serve.sh와 동일 경로). 구 Streamlit(app.py)이 아니다.
 set -euo pipefail
 cd "$(dirname "$0")"
 
+APP_PATTERN="uvicorn api.main:app"
+
 if [ "${1:-}" = "stop" ]; then
-  pkill -f "streamlit run app.py" 2>/dev/null || true
+  pkill -f "$APP_PATTERN" 2>/dev/null || true
   pkill -f "cloudflared tunnel" 2>/dev/null || true
   echo "🛑 앱·터널 종료됨."
   exit 0
@@ -21,24 +26,35 @@ if [ "${1:-}" = "url" ]; then
   exit 0
 fi
 
-PORT="${1:-8501}"
+PORT="${1:-8000}"
 command -v cloudflared >/dev/null || { echo "❌ cloudflared 필요: brew install cloudflared"; exit 1; }
 [ -x .venv/bin/python ] || { echo "❌ .venv 필요: uv venv --python 3.12 .venv && uv pip install -p .venv -e ."; exit 1; }
 
 mkdir -p .run
 # 기존 정리
-pkill -f "streamlit run app.py" 2>/dev/null || true
+pkill -f "$APP_PATTERN" 2>/dev/null || true
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 sleep 1
 
-# 1) 앱 기동 (풀 기능 — .env의 e5-large RAG·Gemini·MOLIT 로드)
-nohup .venv/bin/python -m streamlit run app.py --server.port "$PORT" --server.headless true > .run/app.log 2>&1 &
+# editable install 확인 (이 환경은 .pth 숨김/롤백으로 수시로 풀림 — serve.sh와 동일)
+if ! .venv/bin/python -c "import onjeon" 2>/dev/null; then
+  chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null || true
+  .venv/bin/python -c "import onjeon" 2>/dev/null || uv pip install -p .venv -e . -q
+fi
+
+# 1) 프론트 빌드 — 공개할 화면이 web/dist다(빌드 안 하면 옛 화면이 나간다)
+echo "▶ 프론트 빌드…"
+( cd web && { [ -d node_modules ] || npm ci; } && npm run build ) > .run/build.log 2>&1 \
+  || { echo "❌ 프론트 빌드 실패 — .run/build.log 확인"; tail -12 .run/build.log; exit 1; }
+
+# 2) 앱 기동 (FastAPI 단일 서버 — .env의 MOLIT 키 로드)
+nohup .venv/bin/uvicorn api.main:app --host 0.0.0.0 --port "$PORT" > .run/app.log 2>&1 &
 echo "🚀 앱 기동 중…"
 for i in $(seq 1 120); do
-  curl -s "http://localhost:$PORT/_stcore/health" 2>/dev/null | grep -q ok && break
+  curl -sf -o /dev/null "http://localhost:$PORT/openapi.json" 2>/dev/null && break
   sleep 0.5
 done
-curl -s "http://localhost:$PORT/_stcore/health" 2>/dev/null | grep -q ok \
+curl -sf -o /dev/null "http://localhost:$PORT/openapi.json" 2>/dev/null \
   || { echo "❌ 앱 기동 실패 — .run/app.log 확인"; tail -12 .run/app.log; exit 1; }
 
 # 2) 터널 기동 + 공개 URL 추출
