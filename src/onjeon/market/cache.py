@@ -22,9 +22,17 @@ CREATE INDEX IF NOT EXISTS idx_deal_lookup
 
 
 def open_cache(path) -> sqlite3.Connection:
-    """캐시 DB 연결(+스키마 보장). path 디렉터리는 미리 존재해야 함."""
+    """캐시 DB 연결(+스키마 보장). path 디렉터리는 미리 존재해야 함.
+
+    check_same_thread=False: FastAPI는 동기 의존성(get_cache)을 스레드풀에서 돌리는데
+    생성·사용·정리(conn.close)가 서로 다른 스레드에 배정될 수 있다. 기본값(True)이면
+    동시 요청에서 sqlite3.ProgrammingError로 500이 난다(요청당 연결이 하나뿐이라
+    두 스레드가 '동시에' 쓰는 경우는 없어 안전).
+    WAL: 읽기가 쓰기를 기다리지 않게 해 동시 조회 지연을 없앤다.
+    """
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path))
+    conn = sqlite3.connect(str(path), check_same_thread=False, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(_SCHEMA)
     conn.commit()
     return conn

@@ -20,6 +20,7 @@ from onjeon.register.parse import NoTextLayer, parse_register_pdf
 load_env()  # .env의 MOLIT_API_KEY 등을 프로세스 환경으로 — 라이브 시세 조회용
 app = FastAPI(title="온전 API")
 _CACHE_PATH = Path("data/cache.db")
+_MAX_UPLOAD = 20 * 1024 * 1024  # 등기부 PDF 업로드 상한 20MB
 
 
 def get_cache():
@@ -43,7 +44,14 @@ def get_market_trends(region: str, buildingType: str, period: str, cache=Depends
 
 @app.post("/api/register/parse")
 async def post_register_parse(file: UploadFile, cache=Depends(get_cache)):
-    data = await file.read()
+    # 크기 상한: 등기부는 보통 수백 KB. 상한이 없으면 대용량 업로드 하나가
+    # 메모리+파싱으로 서버를 오래 점유한다(50MB 실측 73초).
+    data = await file.read(_MAX_UPLOAD + 1)
+    if len(data) > _MAX_UPLOAD:
+        raise HTTPException(
+            status_code=413,
+            detail=f"파일이 너무 큽니다 — {_MAX_UPLOAD // (1024 * 1024)}MB 이하 PDF만 올려주세요",
+        )
     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
         tmp.write(data)
         tmp.flush()
@@ -51,6 +59,11 @@ async def post_register_parse(file: UploadFile, cache=Depends(get_cache)):
             fields = parse_register_pdf(tmp.name)
         except NoTextLayer as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except Exception as exc:  # 손상 PDF·비PDF 등 업로드 경계 방어 — 500 대신 친화 422
+            raise HTTPException(
+                status_code=422,
+                detail="등기부 파일을 읽지 못했습니다 — PDF가 맞는지 확인하거나 수동 입력하세요",
+            ) from exc
     region_code = resolve_lawd_cd(fields.get("sigungu") or "")
     building_type = None
     if fields.get("building_use"):

@@ -80,12 +80,16 @@ def parse_register_pdf(path) -> dict:
     with pdfplumber.open(path) as pdf:
         text = "\n".join(page.extract_text() or "" for page in pdf.pages)
     if text.strip():
-        return extract_fields(text)
+        try:
+            return extract_fields(text)
+        except ValueError:
+            pass  # 텍스트 레이어는 있으나 필드 부족(표지만 디지털·부분 스캔 등) → OCR 폴백
 
+    # 텍스트 레이어 없음 OR 텍스트에서 필드 추출 실패 → 무료 OCR 폴백
     try:
         ocr_text = _ocr_pages(path)
     except Exception as exc:  # tesseract 미설치 등
-        raise NoTextLayer("텍스트 레이어 없음 + OCR 불가(tesseract 미설치?) — 수동 입력") from exc
+        raise NoTextLayer("텍스트 레이어 없음/부족 + OCR 불가(tesseract 미설치?) — 수동 입력") from exc
     if not ocr_text.strip():
         raise NoTextLayer("텍스트·OCR 모두 실패 — 수동 입력")
     try:

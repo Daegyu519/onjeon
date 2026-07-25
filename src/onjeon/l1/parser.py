@@ -55,6 +55,22 @@ def _extract_json(text: str) -> dict:
         raise ValueError(f"LLM 응답이 JSON이 아니다: {text[:80]!r}") from exc
 
 
+def _strip_nulls(obj):
+    """추출 결과에서 값이 null(None)인 키를 제거한다.
+
+    실물 등기부에서 Gemini는 확인 불가한 필드를 null로 채우는데(예:
+    senior_lease_deposits_krw: null), 스키마의 정수 타입 검사에 걸린다.
+    null 키를 제거하면 '없음(선택 필드)'으로 취급돼 게이트를 통과하고,
+    하위 코드가 .get 기본값으로 안전 처리한다. 진짜 필수 필드가 null이면
+    제거 후에도 'required' 위반으로 게이트가 정확히 막는다.
+    """
+    if isinstance(obj, dict):
+        return {k: _strip_nulls(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [_strip_nulls(v) for v in obj]
+    return obj
+
+
 def parse_register(
     images: list,
     llm: LLMClient,
@@ -69,7 +85,11 @@ def parse_register(
     주입이 없으면 기존 게이트 규칙 그대로(시세 누락 문서 차단).
     """
     raw = llm.complete(EXTRACT_PROMPT, system=SYSTEM_PROMPT, images=images)
-    doc = _extract_json(raw)
+    doc = _strip_nulls(_extract_json(raw))
+    # 등기부 필수 섹션이 누락되면 빈 배열로 채워 게이트 통과(실추출 결손 대비)
+    register = doc.setdefault("register", {})
+    register.setdefault("gap_section", [])
+    register.setdefault("eul_section", [])
     if market_price_krw is not None:
         from datetime import date
 
