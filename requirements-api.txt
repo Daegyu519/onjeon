@@ -1,0 +1,19 @@
+# 컨테이너(api.main:app) 런타임 최소 의존성.
+#
+# requirements.txt는 Streamlit 데모·RAG·L2까지 포함해 무겁다(streamlit·pandas·numpy·
+# scikit-learn·matplotlib·fastembed(onnxruntime)…). 컨테이너는 app.py를 복사하지 않고
+# FastAPI만 띄우므로 그 전부가 쓰이지 않는다 — 무료 티어 디스크(예: Koyeb 2GB)와
+# 빌드 시간(무료 500분/월)을 아끼려 런타임에 실제로 import되는 것만 남겼다.
+#
+# 검증: api/main.py에서 시작해 onjeon 모듈을 정적 추적한 외부 패키지 목록과 일치.
+# 갱신 시: 이 파일만 설치한 깨끗한 venv에서 `import api.main`이 되는지 확인할 것.
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9   # UploadFile(등기부 업로드)
+python-dotenv>=1.0        # onjeon.config.load_env
+requests>=2.32            # 국토부 실거래가 호출
+tenacity>=9.0             # 조회 재시도
+pdfplumber>=0.11          # 등기부 텍스트 레이어 파싱
+pypdfium2>=4.30           # 스캔 PDF 렌더(OCR 입력)
+pytesseract>=0.3.10       # 스캔 PDF OCR(바이너리는 Dockerfile에서 apt로 설치)
