@@ -123,6 +123,10 @@ button {
 .change.flat {
   color: var(--text-3);
 }
+/* 헤드라인 지표(매매/전세/월세) 선택 세그먼트 — 큰 숫자 위, 좌측 정렬 */
+.metric-seg {
+  margin: 10px 0 2px;
+}
 
 /* ── 컨트롤 ── */
 .controls {
@@ -218,6 +222,29 @@ button {
 }
 .legend .off {
   opacity: 0.4;
+}
+/* 월세 분리 차트(작은 배수) */
+.chart-card.mini {
+  min-height: auto;
+}
+.mini-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-2);
+}
+.mini-title i {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
+.mini-title span {
+  color: var(--text-3);
+  font-weight: 600;
+  font-size: 11px;
 }
 
 /* ── 상태/주석 ── */
@@ -365,6 +392,12 @@ button {
   color: var(--text-3);
   font-weight: 600;
   font-size: 11px;
+}
+/* 금액 입력 아래 한글 판독(= 1억 2,300만원) — 입력 즉시 확인 피드백 */
+.form-grid label span.gloss {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .form-grid input,
 .form-grid select {

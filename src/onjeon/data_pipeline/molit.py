@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import statistics
 import xml.etree.ElementTree as ET
 from datetime import date
@@ -25,6 +26,9 @@ import requests
 from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger("onjeon.data_pipeline")
+
+# 예외·로그 메시지의 serviceKey 값을 값 무관하게 제거(퍼센트 인코딩된 키도 잡는다).
+_KEY_RE = re.compile(r"(serviceKey=)[^&\s)'\"]+")
 
 # 연립다세대(빌라) 매매 실거래가 (2026-07-19 실검증) — 오피스텔/전월세는 자매 엔드포인트
 DEFAULT_ENDPOINT = "https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade"
@@ -220,8 +224,11 @@ def _fetch_xml(
             response.raise_for_status()
         except requests.RequestException as exc:
             # requests 예외 메시지엔 URL(serviceKey 포함)이 들어간다 — 키 마스킹.
+            # 값 기반 replace로는 못 막는다: requests가 파라미터를 퍼센트 인코딩하므로
+            # '+/=' 를 가진 키(data.go.kr Decoding 키의 전형)는 평문이 아니라
+            # AbC%2BdEf%2F.. 로 남아 그대로 유출된다. 패턴 기반으로 값 전체를 지운다.
             # 같은 타입으로 재던져 재시도 판별(_is_retryable)을 보존한다.
-            sanitized = str(exc).replace(key, "***")
+            sanitized = _KEY_RE.sub(r"\1***", str(exc)).replace(key, "***")
             raise type(exc)(sanitized, response=getattr(exc, "response", None)) from None
         return response
 
@@ -283,11 +290,14 @@ def fetch_deals(
     service_key: str | None = None,
     http_get=requests.get,
     retry_wait=None,
+    conversion_rate: float | None = None,
 ) -> list[dict]:
     """용도별(apt/rh/offi) 실거래가 → 정규화 {amount_krw, area_m2, deal_date, dong, jibun}.
 
     deal_kind='trade': 매매금액. deal_kind='jeonse': 전월세 응답 중 월세금 0
-    (=전세)만 걸러 보증금액을 amount_krw로 반환한다(월세 매물은 제외).
+    (=전세)만 걸러 보증금액을 amount_krw로. deal_kind='wolse': 월세금>0만 걸러
+    실질(환산)월세 = 월세 + 보증금×conversion_rate/12 를 amount_krw로 반환한다.
+    conversion_rate 미지정 시 0.055(전월세전환율 대표값) 사용.
     dong/jibun은 매물단위(건물) 시세 필터링용 — parse_trades/parse_rents의 값을 그대로 전달.
     """
     kind = "trade" if deal_kind == "trade" else "rent"
@@ -310,6 +320,20 @@ def fetch_deals(
             }
             for t in parse_trades(xml_text)
         ]
+    rents = parse_rents(xml_text)
+    if deal_kind == "wolse":
+        conv = conversion_rate if conversion_rate is not None else 0.055
+        return [
+            {
+                "amount_krw": round(r["monthly_rent_krw"] + r["deposit_krw"] * conv / 12),
+                "area_m2": r["area_m2"],
+                "deal_date": r["deal_date"],
+                "dong": r["dong"],
+                "jibun": r["jibun"],
+            }
+            for r in rents
+            if r["monthly_rent_krw"] > 0
+        ]
     return [
         {
             "amount_krw": r["deposit_krw"],
@@ -318,7 +342,7 @@ def fetch_deals(
             "dong": r["dong"],
             "jibun": r["jibun"],
         }
-        for r in parse_rents(xml_text)
+        for r in rents
         if r["monthly_rent_krw"] == 0
     ]
 

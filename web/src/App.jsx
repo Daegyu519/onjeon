@@ -21,11 +21,27 @@ const PERIODS = [
   { v: '5y', l: '5년' },
 ]
 const TYPE_LABEL = { apt: '아파트', rh: '빌라', offi: '오피스텔', sh: '단독·다가구' }
+const nn = (a) => (a || []).filter((v) => v != null).length // 비-null 개수(희소 판정용)
+// 헤드라인으로 고를 수 있는 지표(매매/전세/월세). arr=응답 필드, name=단위 옆 표기.
+const METRICS = [
+  { k: 'mae', tab: '매매', name: '매매', arr: 'mae_price', unit: '만원/평' },
+  { k: 'jun', tab: '전세', name: '전세', arr: 'jun_price', unit: '만원/평' },
+  { k: 'wolse', tab: '월세', name: '환산월세', arr: 'wolse_price', unit: '만원/평·월' },
+]
+// 시계열 배열 → {최근값, 기간전 대비 %} | null(데이터 없음)
+const statOf = (arr) => {
+  const vals = (arr || []).filter((v) => v != null)
+  if (!vals.length) return null
+  const first = vals[0]
+  const last = vals[vals.length - 1]
+  return { last, pct: first ? ((last - first) / first) * 100 : 0 }
+}
 
 export default function App() {
   const [region, setRegion] = useState('관악구')
   const [buildingType, setBuildingType] = useState('rh')
   const [period, setPeriod] = useState('1y')
+  const [metric, setMetric] = useState('mae') // 헤드라인 지표: mae|jun|wolse
   const [dong, setDong] = useState(null)
   const [jibun, setJibun] = useState(null)
   const [propertyInfo, setPropertyInfo] = useState(null)
@@ -81,18 +97,13 @@ export default function App() {
     setPendingReg(null)
   }
 
-  // 대표 평당가(매매) — 최근값과 기간 전 대비 등락
-  const stat = useMemo(() => {
-    if (!data?.mae_price) return null
-    const vals = data.mae_price.filter((v) => v != null)
-    if (!vals.length) return null
-    const first = vals[0]
-    const last = vals[vals.length - 1]
-    const pct = first ? ((last - first) / first) * 100 : 0
-    return { last, pct }
-  }, [data])
-
   const junUnavailable = data?.unavailable?.includes('jun_price')
+  const hasWolse = data?.wolse_price?.some((v) => v != null)
+
+  // 헤드라인 지표(매매/전세/월세) 선택 — 최근값 + 기간 전 대비 등락. 데이터 있는 지표만 노출.
+  const availMetrics = METRICS.filter((m) => (data?.[m.arr] || []).some((v) => v != null))
+  const cur = availMetrics.find((m) => m.k === metric) || availMetrics[0] || METRICS[0]
+  const heroStat = statOf(data?.[cur.arr])
 
   const option = useMemo(() => {
     if (!data) return {}
@@ -140,16 +151,54 @@ export default function App() {
       series: [
         {
           name: '매매', type: 'line', data: show.mae ? data.mae_price : [],
-          smooth: true, showSymbol: false, connectNulls: false,
+          smooth: true, showSymbol: nn(data.mae_price) < 3, symbolSize: 6, connectNulls: false,
           lineStyle: { width: 2.6 }, areaStyle: { color: 'rgba(0,168,77,0.06)' },
         },
         {
           name: '전세', type: 'line', data: show.jun ? data.jun_price : [],
-          smooth: true, showSymbol: false, connectNulls: false, lineStyle: { width: 2.6 },
+          smooth: true, showSymbol: nn(data.jun_price) < 3, symbolSize: 6, connectNulls: false,
+          lineStyle: { width: 2.6 },
         },
       ],
     }
   }, [data, show])
+
+  // 월세는 (보증금+월세) → 실질(환산)월세라 자산가(매매·전세)와 스케일·단위가 달라
+  // 이중축(dataviz 안티패턴) 대신 별도 차트로. 단일 축 · 희소하면 점.
+  const wolseOption = useMemo(() => {
+    if (!data || !hasWolse) return null
+    return {
+      color: ['#e8590c'], // 월세 = 따뜻한 오렌지(자산 라인과 구분, 월 비용 함의)
+      grid: { left: 6, right: 14, top: 14, bottom: 24, containLabel: true },
+      tooltip: {
+        trigger: 'axis', backgroundColor: '#191f28', borderWidth: 0, padding: [10, 12],
+        textStyle: { color: '#fff', fontSize: 12 },
+        formatter: (ps) => {
+          const p = ps.find((x) => x.value != null)
+          if (!p) return ''
+          return `<div style="font-weight:700;margin-bottom:5px">${ps[0].axisValue}</div>
+            <div style="display:flex;justify-content:space-between;gap:18px">
+            <span>${p.marker}환산월세</span>
+            <b style="font-variant-numeric:tabular-nums">${p.value.toLocaleString()}만원/평·월</b></div>`
+        },
+      },
+      xAxis: {
+        type: 'category', data: data.dates, boundaryGap: false,
+        axisLine: { lineStyle: { color: '#e5e8eb' } }, axisTick: { show: false },
+        axisLabel: { color: '#8b95a1', fontSize: 11, hideOverlap: true },
+      },
+      yAxis: {
+        type: 'value', scale: true,
+        splitLine: { lineStyle: { color: '#f2f4f6' } },
+        axisLabel: { color: '#8b95a1', fontSize: 11, formatter: (v) => `${v}만` },
+      },
+      series: [{
+        name: '환산월세', type: 'line', data: data.wolse_price,
+        smooth: true, showSymbol: nn(data.wolse_price) < 3, symbolSize: 7, connectNulls: false,
+        lineStyle: { width: 2.6 }, areaStyle: { color: 'rgba(232,89,12,0.06)' },
+      }],
+    }
+  }, [data, hasWolse])
 
   const ctx = propertyInfo
     ? `${propertyInfo.sigungu || region} ${propertyInfo.dong || ''} ${propertyInfo.jibun || ''} · ${TYPE_LABEL[buildingType]}${propertyInfo.exclusive_area_m2 ? ` · 전용 ${propertyInfo.exclusive_area_m2}㎡` : ''}`
@@ -190,15 +239,29 @@ export default function App() {
           {data?.level_label || '지역 기준'}
         </span>
         <div className="context">{ctx}</div>
+        {availMetrics.length > 0 && (
+          <div className="seg metric-seg">
+            {availMetrics.map((m) => (
+              <button key={m.k} className={cur.k === m.k ? 'on' : ''} onClick={() => setMetric(m.k)}>
+                {m.tab}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="price">
-          <span className="num">{stat ? stat.last.toLocaleString() : '—'}</span>
-          <span className="unit">만원/평 (매매)</span>
-          {stat && (
-            <span className={`change ${stat.pct > 0.05 ? 'up' : stat.pct < -0.05 ? 'down' : 'flat'}`}>
-              {stat.pct > 0 ? '▲' : stat.pct < 0 ? '▼' : ''} {Math.abs(stat.pct).toFixed(1)}%
+          <span className="num">{heroStat ? heroStat.last.toLocaleString() : '—'}</span>
+          <span className="unit">{cur.unit} ({cur.name})</span>
+          {heroStat && (
+            <span className={`change ${heroStat.pct > 0.05 ? 'up' : heroStat.pct < -0.05 ? 'down' : 'flat'}`}>
+              {heroStat.pct > 0 ? '▲' : heroStat.pct < 0 ? '▼' : ''} {Math.abs(heroStat.pct).toFixed(1)}%
               <span style={{ color: 'var(--text-3)', fontWeight: 600 }}> · 기간 전 대비</span>
             </span>
           )}
+          {cur.k === 'wolse' && data?.conversion_rate ? (
+            <span style={{ color: 'var(--text-3)', fontWeight: 600, fontSize: 13 }}>
+              · 전월세전환율 {(data.conversion_rate * 100).toFixed(1)}%
+            </span>
+          ) : null}
         </div>
 
         <div className="controls">
@@ -242,16 +305,25 @@ export default function App() {
         )}
       </section>
 
+      {hasWolse && (
+        <section className="chart-card mini">
+          <div className="mini-title">
+            <i style={{ background: '#e8590c' }} />월세 실질(환산) · 평당 <span>만원/월</span>
+          </div>
+          <ReactECharts option={wolseOption} style={{ height: 210 }} notMerge />
+        </section>
+      )}
+
       {junUnavailable && (
         <div className="note">
-          <b>{TYPE_LABEL[buildingType]} 전세 실거래가가 아직 활용신청 승인 전이에요.</b> data.go.kr에서
+          <b>{TYPE_LABEL[buildingType]} 전세·월세 실거래가가 아직 활용신청 승인 전이에요.</b> data.go.kr에서
           해당 전월세 API를 활용신청하면 같은 키로 표시됩니다. (매매선은 실데이터로 정상 표시)
         </div>
       )}
       <div className="note">
-        국토교통부 실거래가 기반. 값은 <b>평당가(만원)</b> = 거래금액 ÷ (전용면적 ÷ 3.3058).
+        국토교통부 실거래가 기반. 매매·전세는 <b>평당가(만원)</b> = 거래금액 ÷ (전용면적 ÷ 3.3058).
         특정 호실이 아니라 <b>{data?.level_label || '해당 지역'}</b>의 같은 유형 거래 집계이며, 당월은 신고 지연으로 불완전할 수 있어요.
-        <br /><b>시세는 매매·전세만</b> 표시해요 — 월세는 흐름 시세로 제공하지 않고, 월세 부담은 <b>‘내 조건 진단’ 탭</b>에서 계산합니다.
+        <br /><b>월세는 실질(환산월세)</b> = 월세 + 보증금 × 전월세전환율{data?.conversion_rate ? `(${(data.conversion_rate * 100).toFixed(1)}%)` : ''} ÷ 12 를 평당 환산해 <b>아래 별도 차트</b>로 표시하고, 거래가 적은 구간은 <b>점</b>으로 나타냅니다.
       </div>
       </>
       )}

@@ -19,10 +19,11 @@ from onjeon.market import cache as cache_mod
 from onjeon.market.buckets import average_by_bucket, bucket_key
 from onjeon.market.period import granularity_for, period_months
 from onjeon.market.pyeong import price_per_pyeong
+from onjeon.rules_io import load_rules
 
 logger = logging.getLogger("onjeon.market")
 
-_KINDS = {"mae_price": "trade", "jun_price": "jeonse"}
+_KINDS = {"mae_price": "trade", "jun_price": "jeonse", "wolse_price": "wolse"}
 
 MIN_BUCKETS = 3
 
@@ -89,19 +90,25 @@ def _level_label(level: str, region: str, dong: str | None, jibun: str | None) -
 
 def market_trends(region, building_type, period, *, cache, today=None, queried_at,
                   service_key=None, http_get=None, retry_wait=None,
-                  dong=None, jibun=None) -> dict:
-    """지역·용도·기간 → {dates, mae_price, jun_price, level, level_label}(평당 만원, 결측 None).
+                  dong=None, jibun=None, conversion_rate=None) -> dict:
+    """지역·용도·기간 → {dates, mae_price, jun_price, wolse_price, level, level_label}
+    (매매·전세는 평당 만원 정수, 월세는 평당 환산월세 만원(소수1) — 결측 None).
 
     dong/jibun(대상 매물의 법정동·지번)을 주면 계단식으로 매물단위까지 좁힌다.
     기본값 None이면 필터 없음(sigungu, 기존 동작과 동일) — 하위호환.
+    conversion_rate(전월세전환율) 미지정 시 market_params 룰에서 로드(월세 환산용).
     """
     region_code = resolve_lawd_cd(region)
     if region_code is None:
         raise ValueError(f"실거래가 자동 조회 미지원 지역: {region!r}")
 
+    if conversion_rate is None:
+        conversion_rate = load_rules("market_params")["jeonse_wolse_conversion_rate"]
+
     months = period_months(period, today)
     gran = granularity_for(period)
-    fetch_kw = {"service_key": service_key, "retry_wait": retry_wait}
+    fetch_kw = {"service_key": service_key, "retry_wait": retry_wait,
+                "conversion_rate": conversion_rate}
     if http_get is not None:
         fetch_kw["http_get"] = http_get
 
@@ -125,7 +132,11 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
     for out_key, deals in all_deals.items():
         filtered = _filter(deals, level, dong, jibun)
         by_bucket = average_by_bucket(filtered, gran)
-        series[out_key] = {k: v["pyeong_krw"] // 10_000 for k, v in by_bucket.items()}
+        if out_key == "wolse_price":
+            # 환산월세는 월 flow(평당 수만원) — 만원 정수(//)로 나누면 0이 되므로 소수 1자리
+            series[out_key] = {k: round(v["pyeong_krw"] / 10_000, 1) for k, v in by_bucket.items()}
+        else:
+            series[out_key] = {k: v["pyeong_krw"] // 10_000 for k, v in by_bucket.items()}
         all_buckets |= set(by_bucket)
 
     dates = sorted(all_buckets)
@@ -133,7 +144,9 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
         "dates": dates,
         "mae_price": [series["mae_price"].get(d) for d in dates],
         "jun_price": [series["jun_price"].get(d) for d in dates],
+        "wolse_price": [series["wolse_price"].get(d) for d in dates],
         "level": level,
         "level_label": _level_label(level, region, dong, jibun),
         "unavailable": unavailable,
+        "conversion_rate": conversion_rate,
     }
