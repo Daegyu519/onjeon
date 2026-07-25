@@ -51,10 +51,15 @@ def get_market_trends(region: str, buildingType: str, period: str, cache=Depends
 
 
 @app.post("/api/register/parse")
-async def post_register_parse(file: UploadFile, cache=Depends(get_cache)):
+def post_register_parse(file: UploadFile):
+    # 동기 def인 것이 핵심 — FastAPI가 이 핸들러를 스레드풀에서 돌린다. async def로 두면
+    # pdfplumber·tesseract(동기·CPU)가 이벤트 루프를 점유해서, 등기부 업로드 1건이
+    # 다른 방문자의 시세 조회까지 전부 멈춘다(50MB 실측 73초 동안 서버 전체 정지).
+    # 그래서 await file.read()가 아니라 file.file.read()로 읽는다.
+    #
     # 크기 상한: 등기부는 보통 수백 KB. 상한이 없으면 대용량 업로드 하나가
-    # 메모리+파싱으로 서버를 오래 점유한다(50MB 실측 73초).
-    data = await file.read(_MAX_UPLOAD + 1)
+    # 메모리+파싱으로 서버를 오래 점유한다.
+    data = file.file.read(_MAX_UPLOAD + 1)
     if len(data) > _MAX_UPLOAD:
         raise HTTPException(
             status_code=413,
