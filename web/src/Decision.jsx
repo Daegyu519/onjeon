@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { parseWon, formatWon, glossKR } from './money'
 
 const SEOUL_GU = [
   '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구',
@@ -14,12 +15,34 @@ const rate = (t) =>
   t.interest_rate != null ? `금리 ${(t.interest_rate * 100).toFixed(1)}%` : '금리 구간별 변동'
 const limit = (t) => (t.limit_krw ? ` · 한도 ${won(t.limit_krw)}` : '')
 
+// 금액 입력: 내부값은 원(₩) 정수. 타이핑 중엔 raw 그대로(한글 "1억2천"·콤마 방해 없음),
+// blur 시 콤마 정규화, 아래 gloss로 "= 1억 2,300만원" 실시간 판독(입력 즉시 확인 피드백).
+function MoneyField({ label, hint = '원', value, onChange, placeholder }) {
+  const [focused, setFocused] = useState(false)
+  const [raw, setRaw] = useState('')
+  const display = focused ? raw : formatWon(value)
+  return (
+    <label>
+      {label} <span>{hint}</span>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={display}
+        onFocus={() => { setFocused(true); setRaw(value != null ? String(value) : '') }}
+        onChange={(e) => { setRaw(e.target.value); onChange(parseWon(e.target.value)) }}
+        onBlur={() => setFocused(false)}
+      />
+      {value != null && <span className="gloss">= {glossKR(value)}</span>}
+    </label>
+  )
+}
+
 export default function Decision() {
   const [f, setF] = useState({
-    income: 280, assets: 2000, age: 27, region: '관악구',
+    income: 2800000, assets: 20000000, age: 27, region: '관악구',
     homeless: true, head: true, sme: true,
-    kind: 'wolse', deposit: 2000, rent: 55, maint: 7, market: '',
-    jz: '', wsDep: '', wsRent: '',
+    kind: 'wolse', deposit: 20000000, rent: 550000, maint: 70000, market: null,
+    jz: null, wsDep: null, wsRent: null,
   })
   const [res, setRes] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -29,14 +52,15 @@ export default function Decision() {
     const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setF((s) => ({ ...s, [k]: v }))
   }
+  const setMoney = (k) => (v) => setF((s) => ({ ...s, [k]: v })) // 원(₩) 정수 | null
 
   async function submit() {
     setLoading(true)
     setError(null)
     const body = {
       profile: {
-        monthly_income_krw: Number(f.income) * 10000,
-        assets_krw: Number(f.assets) * 10000,
+        monthly_income_krw: f.income || 0,
+        assets_krw: f.assets || 0,
         age: Number(f.age),
         region: f.region,
         is_homeless: f.homeless,
@@ -45,15 +69,15 @@ export default function Decision() {
       },
       listing: {
         kind: f.kind,
-        deposit_krw: Number(f.deposit) * 10000,
-        monthly_rent_krw: f.kind === 'jeonse' ? 0 : Number(f.rent) * 10000,
-        maintenance_krw: Number(f.maint) * 10000,
-        ...(f.market ? { market_price_krw: Number(f.market) * 10000 } : {}),
+        deposit_krw: f.deposit || 0,
+        monthly_rent_krw: f.kind === 'jeonse' ? 0 : (f.rent || 0),
+        maintenance_krw: f.maint || 0,
+        ...(f.market ? { market_price_krw: f.market } : {}),
         ...(f.jz && f.wsRent
           ? {
-              jeonse_deposit_krw: Number(f.jz) * 10000,
-              wolse_deposit_krw: Number(f.wsDep || 0) * 10000,
-              wolse_monthly_rent_krw: Number(f.wsRent) * 10000,
+              jeonse_deposit_krw: f.jz,
+              wolse_deposit_krw: f.wsDep || 0,
+              wolse_monthly_rent_krw: f.wsRent,
             }
           : {}),
       },
@@ -113,8 +137,8 @@ export default function Decision() {
           )}
         </div>
         <div className="form-grid">
-          <label>월소득 <span>만원</span><input type="number" value={f.income} onChange={set('income')} /></label>
-          <label>보유자산 <span>만원</span><input type="number" value={f.assets} onChange={set('assets')} /></label>
+          <MoneyField label="월소득" value={f.income} onChange={setMoney('income')} />
+          <MoneyField label="보유자산" value={f.assets} onChange={setMoney('assets')} />
           <label>나이<input type="number" value={f.age} onChange={set('age')} /></label>
           <label>희망지역
             <select value={f.region} onChange={set('region')}>
@@ -134,16 +158,16 @@ export default function Decision() {
               <option value="jeonse">전세</option>
             </select>
           </label>
-          <label>보증금 <span>만원</span><input type="number" value={f.deposit} onChange={set('deposit')} /></label>
-          {f.kind === 'wolse' && <label>월세 <span>만원</span><input type="number" value={f.rent} onChange={set('rent')} /></label>}
-          <label>관리비 <span>만원</span><input type="number" value={f.maint} onChange={set('maint')} /></label>
-          <label>예상 매매가 <span>만원·선택</span><input type="number" value={f.market} onChange={set('market')} placeholder="매수 비교용" /></label>
+          <MoneyField label="보증금" value={f.deposit} onChange={setMoney('deposit')} />
+          {f.kind === 'wolse' && <MoneyField label="월세" value={f.rent} onChange={setMoney('rent')} />}
+          <MoneyField label="관리비" value={f.maint} onChange={setMoney('maint')} />
+          <MoneyField label="예상 매매가" hint="원·선택" value={f.market} onChange={setMoney('market')} placeholder="매수 비교용" />
         </div>
         <div className="form-grid listing">
           <div className="checks" style={{ fontWeight: 800, color: 'var(--text-2)' }}>전세 vs 월세 비교 (선택·혜택 반영)</div>
-          <label>전세 보증금 <span>만원</span><input type="number" value={f.jz} onChange={set('jz')} placeholder="전세안" /></label>
-          <label>월세 보증금 <span>만원</span><input type="number" value={f.wsDep} onChange={set('wsDep')} placeholder="월세안" /></label>
-          <label>월세 <span>만원</span><input type="number" value={f.wsRent} onChange={set('wsRent')} placeholder="월세안" /></label>
+          <MoneyField label="전세 보증금" value={f.jz} onChange={setMoney('jz')} placeholder="전세안" />
+          <MoneyField label="월세 보증금" value={f.wsDep} onChange={setMoney('wsDep')} placeholder="월세안" />
+          <MoneyField label="월세" value={f.wsRent} onChange={setMoney('wsRent')} placeholder="월세안" />
         </div>
         <button className="submit" onClick={submit} disabled={loading}>
           {loading ? '진단 중…' : '적정 주거비·지원 진단'}
