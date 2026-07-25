@@ -73,7 +73,7 @@ cp .env.example .env   # MOLIT_API_KEY(필수), GEMINI/ANTHROPIC(선택)
 |---|---|---|
 | 개발 (핫리로드) | `./dev.sh` | http://localhost:5180 · API 문서 `:8000/docs` |
 | 로컬 프로덕션 확인 | `./serve.sh` | http://localhost:8000 |
-| 외부 공개 (시연·심사) | `./tunnel.sh` | 발급된 공개 URL (`./tunnel.sh url`로 재확인, `stop`으로 종료) |
+| 외부 공개 (시연·심사) | `./tunnel.sh` | 고정 URL `https://<도메인>` (`./tunnel.sh url`로 확인, `stop`으로 종료) |
 
 > ⚠️ `./run.sh`는 구 Streamlit 데모(`app.py`, :8501)다. 시세 차트·전세/월세 비교·금액 입력은
 > 위 FastAPI 경로에만 있다.
@@ -110,13 +110,29 @@ cp .env.example .env   # MOLIT_API_KEY(필수), GEMINI/ANTHROPIC(선택)
 
 ## 배포
 
-- **현재 경로**: 로컬 + Cloudflare 터널(`./tunnel.sh`) — 무료·계정 불필요. 이 맥이 켜져 있는
-  동안만 유효하고, 재연결되면 URL이 바뀌므로 시연 직전에 띄워 링크를 전달한다.
-- **상시 공개(HF Spaces Docker)**: `deploy-hf.sh` 사용. 가기 전에 정리할 것 —
-  `README` `app_port`(7860) vs `Dockerfile EXPOSE`(8000) 정합, 작업 브랜치 푸시,
-  Space Secrets에 `MOLIT_API_KEY`, 그리고 컨테이너는 파일시스템이 휘발성이라
-  캐시가 비어 시작하므로 **이미지에 캐시 동봉**이 필요하다(`data/cache.db`가 현재
-  `.gitignore`·`.dockerignore` 양쪽에서 제외됨).
+**현재 경로: 로컬 + ngrok 고정 도메인** (`./tunnel.sh`). 무료, 카드 불필요.
+
+최초 1회 설정:
+
+```bash
+brew install --cask ngrok
+ngrok config add-authtoken <대시보드에서 복사>   # https://dashboard.ngrok.com
+echo 'ONJEON_NGROK_DOMAIN=<배정받은-도메인>.ngrok-free.dev' >> .env
+```
+
+이후 `./tunnel.sh`를 몇 번을 껐다 켜도 **주소가 같다** — 제출 서류·QR에 그대로 쓸 수 있다.
+`./tunnel.sh`는 시세 캐시가 비어 있으면 기동을 거부한다(빈 차트가 공개되는 것을 막는다).
+
+> **시연할 때만 켜라.** 고정 주소는 곧 영구히 발견 가능한 주소이고, 이 터널 뒤에 있는 건
+> `.env`에 실제 API 키가 로드된 개인 맥이다(앱에 인증 계층 없음). 예전 랜덤 URL은 끄면
+> 주소가 죽었지만 지금은 꺼도 링크가 유지되므로, 안 쓸 땐 끄는 데 비용이 없다.
+> 무료 한도는 1GB·20k요청/월이고 방문자에게 ngrok 경고 페이지가 한 번 뜬다.
+
+**컨테이너 배포(미채택, 폴백)**: `Dockerfile`·`render.yaml`·`deploy-hf.sh`는 검증된 채로
+남아 있지만 현재 쓰지 않는다. Render 무료는 결제수단 미등록 워크스페이스의 무료 서비스를
+그 달 남은 기간 정지시키고, Koyeb 무료는 신규 가입이 닫혔으며, HF Spaces Docker는
+PRO($9/mo) 전용이기 때문이다(2026-07 확인). 카드를 쓸 수 있게 되면 `render.yaml` 상단
+주석의 3단계를 따르면 된다.
 
 LLM 키(`GEMINI_API_KEY` 우선, 없으면 `ANTHROPIC_API_KEY`)는 what-if 질의·L0 룰 추출에만
 쓰이고, 없으면 MockLLM 오프라인 경로로 동작한다. 기본 모델은 `gemini-2.5-flash`,
@@ -124,7 +140,7 @@ LLM 키(`GEMINI_API_KEY` 우선, 없으면 `ANTHROPIC_API_KEY`)는 what-if 질�
 
 ## 상태
 
-- 현재 단계: L0~L4 전 레이어 + FastAPI/React 웹(시세 흐름·조건 진단) + 테스트 248건.
+- 현재 단계: L0~L4 전 레이어 + FastAPI/React 웹(시세 흐름·조건 진단) + 테스트 252건.
   실거래가는 국토부 6종(아파트·연립다세대·오피스텔·단독다가구 × 매매·전월세) 실키 연동.
 - 남은 작업: 실제 등기부 샘플 10건 L1 정확도 표, `[확인]` 수치 전수 재검증 ([docs/workflow.md](docs/workflow.md) 체크리스트)
 - 원본 제안서: `KB_AI_Challenge_제안서_초안.md` (⚠️ `[확인]` 마커 항목은 최신 수치 검증 필요)
