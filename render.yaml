@@ -11,6 +11,9 @@ services:
     name: onjeon
     runtime: docker
     plan: free
+    # Blueprint 기본값은 리포의 기본 브랜치(main)인데 render.yaml이 아직 이 브랜치에만
+    # 있어 명시한다. main으로 병합한 뒤에는 이 줄을 지워도 된다.
+    branch: feat/market-trends-backend
     # Dockerfile은 리포 루트(rootDir 기본값)에 있으므로 경로 지정 불필요.
     # Render가 자체 linux/amd64 인프라에서 직접 빌드하므로 맥(arm64)과 무관하다.
     healthCheckPath: /openapi.json
