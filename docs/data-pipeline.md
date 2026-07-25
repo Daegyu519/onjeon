@@ -74,8 +74,8 @@ write_auction_rules(rules)   # rules/auction_rates_2026-08.json — 로더가 �
 |---|---|---|
 | Vector DB | Qdrant 임베디드(`:memory:`/`path=`) | 서버·Docker·클라우드 0원. 동일 코드로 Qdrant Cloud 승격 가능 |
 | 검색 | **하이브리드**: dense + sparse(crc32 토큰, 서버측 IDF) → Query API RRF 융합 | 조문번호 등 리터럴 매칭 보강. MiniLM 기준 R@5 0.667→**0.900** (2026-07-19 골든셋 실측) |
-| 임베딩 | 기본 MiniLM(384d, 클라우드 메모리 제약) / 로컬 `ONJEON_EMBED_MODEL=intfloat/multilingual-e5-large`(1024d) | e5-large 실측 R@5 **1.000**·MRR **0.961**. bge-m3는 설치 fastembed 미지원(확인됨). 미설치 환경은 해시 임베더 폴백 |
-| 리랭커 | 구현·주입 가능(`rag/reranker.py`, bge-reranker-base), **기본 OFF** | 현 코퍼스에서 e5-large가 골든셋 포화(R@5 1.0) — 개선 여지 0. 코퍼스 확장 후 재측정 |
+| 임베딩 | 기본 MiniLM(384d, 클라우드 메모리 제약) / 로컬 `ONJEON_EMBED_MODEL=intfloat/multilingual-e5-large`(1024d) | e5-large 실측 R@5 **0.97**·MRR **0.911** (2026-07-26, fastembed 0.8.0). ⚠️ 2026-07-19 fastembed 구버전 측정치는 R@5 1.000·MRR 0.961이었으나 재현 불가 — fastembed가 e5-large 풀링을 CLS→mean으로 변경(0.5.1 핀 고정 시 구동작). 모델 2.24GB 최초 다운로드 필요. bge-m3는 설치 fastembed 미지원(확인됨). 미설치 환경은 해시 임베더 폴백 |
+| 리랭커 | 구현·주입 가능(`rag/reranker.py`, bge-reranker-base), **기본 OFF** | 미스 1건 잔존(`서른다섯 살…` — 숫자 표기 대 한글 수사). 리랭커로 개선되는지는 미측정 — 켜기 전에 골든셋으로 실측할 것 |
 | 평가 | 골든셋 30문항 `rag/eval.py` (Recall@5·MRR) | 모든 검색 변경은 이 하네스 수치로만 채택 |
 | 청크 | 조항 단위 (룰 DB 구조 그대로) | 청크 전략 비용 0, 인용 정밀도 최대 |
 | ID | 콘텐츠 해시(uuid5) | 재실행 멱등 — 중복 적재 없음. 임베딩 차원 변경 시 컬렉션 자동 재생성 |
