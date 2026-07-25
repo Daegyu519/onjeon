@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from datetime import date
 from pathlib import Path
@@ -22,6 +23,12 @@ app = FastAPI(title="온전 API")
 _CACHE_PATH = Path("data/cache.db")
 _MAX_UPLOAD = 20 * 1024 * 1024  # 등기부 PDF 업로드 상한 20MB
 
+# 공개 배포 자세: 1이면 시세 조회가 캐시만 읽고 외부 국토부 API를 호출하지 않는다.
+# 인증 없는 공개 엔드포인트가 외부 호출 경로를 타면(1요청 최대 183회) 누구나 운영자의
+# 실명 인증 서비스키 쿼터를 소진시킬 수 있다. 공개 URL로 띄울 땐 반드시 1로 두고,
+# 캐시는 scripts/warm_cache.py로 미리 채운다. 로컬 개발은 기본값(0)이 편하다.
+_READONLY = os.environ.get("ONJEON_PUBLIC_READONLY", "").strip() in {"1", "true", "yes"}
+
 
 def get_cache():
     """요청 스코프 캐시 연결(테스트는 dependency_overrides로 교체)."""
@@ -37,7 +44,8 @@ def get_market_trends(region: str, buildingType: str, period: str, cache=Depends
                       dong: str | None = None, jibun: str | None = None):
     try:
         return market_trends(region, buildingType, period, cache=cache,
-                             queried_at=date.today().isoformat(), dong=dong, jibun=jibun)
+                             queried_at=date.today().isoformat(), dong=dong, jibun=jibun,
+                             allow_fetch=not _READONLY)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

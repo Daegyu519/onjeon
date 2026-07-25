@@ -90,13 +90,20 @@ def _level_label(level: str, region: str, dong: str | None, jibun: str | None) -
 
 def market_trends(region, building_type, period, *, cache, today=None, queried_at,
                   service_key=None, http_get=None, retry_wait=None,
-                  dong=None, jibun=None, conversion_rate=None) -> dict:
+                  dong=None, jibun=None, conversion_rate=None,
+                  allow_fetch=True) -> dict:
     """지역·용도·기간 → {dates, mae_price, jun_price, wolse_price, level, level_label}
     (매매·전세는 평당 만원 정수, 월세는 평당 환산월세 만원(소수1) — 결측 None).
 
     dong/jibun(대상 매물의 법정동·지번)을 주면 계단식으로 매물단위까지 좁힌다.
     기본값 None이면 필터 없음(sigungu, 기존 동작과 동일) — 하위호환.
     conversion_rate(전월세전환율) 미지정 시 market_params 룰에서 로드(월세 환산용).
+
+    allow_fetch=False면 외부 실거래가 API를 호출하지 않고 캐시만 읽는다(읽기 전용).
+    공개 배포에서 필요한 이유: 이 함수는 캐시 미스 시 (개월 × 3종)만큼 국토부 API를
+    호출한다(5년=최대 183회). 인증 없는 공개 엔드포인트가 이 경로를 타면 누구나
+    운영자의 실명 인증 서비스키 쿼터를 소진시킬 수 있다. 공개 경로는 읽기 전용으로
+    두고, 캐시 워밍(scripts/warm_cache.py)만 호출 권한을 갖는다.
     """
     region_code = resolve_lawd_cd(region)
     if region_code is None:
@@ -115,14 +122,16 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
     all_deals: dict[str, list[dict]] = {}
     unavailable: list[str] = []
     for out_key, kind in _KINDS.items():
-        try:
-            _ensure_cached(cache, region_code, building_type, kind, months, queried_at, **fetch_kw)
-        except requests.RequestException as exc:
-            # 예: 전세/아파트 엔드포인트 활용신청 미승인(403). 전체를 죽이지 않고
-            # 해당 시리즈만 비우고 정직하게 unavailable로 표시한다.
-            logger.warning("시세 조회 실패 kind=%s btype=%s: %r — 해당 시리즈 생략",
-                           kind, building_type, exc)
-            unavailable.append(out_key)
+        if allow_fetch:
+            try:
+                _ensure_cached(cache, region_code, building_type, kind, months, queried_at,
+                               **fetch_kw)
+            except requests.RequestException as exc:
+                # 예: 전세/아파트 엔드포인트 활용신청 미승인(403). 전체를 죽이지 않고
+                # 해당 시리즈만 비우고 정직하게 unavailable로 표시한다.
+                logger.warning("시세 조회 실패 kind=%s btype=%s: %r — 해당 시리즈 생략",
+                               kind, building_type, exc)
+                unavailable.append(out_key)
         all_deals[out_key] = cache_mod.load_deals(cache, region_code, building_type, kind, months)
 
     level = _pick_level(all_deals["mae_price"], all_deals["jun_price"], dong, jibun, gran)
@@ -148,5 +157,7 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
         "level": level,
         "level_label": _level_label(level, region, dong, jibun),
         "unavailable": unavailable,
+        # 읽기 전용 응답임을 명시 — 빈 구간이 '거래 없음'이 아니라 '아직 워밍 안 됨'일 수 있다
+        "cache_only": not allow_fetch,
         "conversion_rate": conversion_rate,
     }

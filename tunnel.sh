@@ -48,6 +48,11 @@ echo "▶ 프론트 빌드…"
   || { echo "❌ 프론트 빌드 실패 — .run/build.log 확인"; tail -12 .run/build.log; exit 1; }
 
 # 2) 앱 기동 (FastAPI 단일 서버 — .env의 MOLIT 키 로드)
+# 공개 URL이므로 읽기 전용이 기본: 시세는 캐시만 읽고 외부 국토부 API를 호출하지 않는다.
+# (인증 없는 공개 경로가 외부 호출을 타면 1요청 최대 183회로 운영자 키 쿼터가 털린다)
+# 캐시는 미리 채운다: .venv/bin/python scripts/warm_cache.py --regions … --types …
+# 의도적으로 라이브 조회를 열려면: ONJEON_PUBLIC_READONLY=0 ./tunnel.sh
+export ONJEON_PUBLIC_READONLY="${ONJEON_PUBLIC_READONLY:-1}"
 nohup .venv/bin/uvicorn api.main:app --host 0.0.0.0 --port "$PORT" > .run/app.log 2>&1 &
 echo "🚀 앱 기동 중…"
 for i in $(seq 1 120); do

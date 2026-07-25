@@ -300,6 +300,9 @@ export default function App() {
           <div className="state">{error}</div>
         ) : data?.dates?.length ? (
           <ReactECharts option={option} style={{ height: 340 }} notMerge />
+        ) : data?.cache_only ? (
+          // 읽기 전용 배포에선 빈 구간이 '거래 없음'이 아니라 '아직 수집 안 됨'일 수 있다
+          <div className="state">이 조건은 아직 수집된 시세가 없어요. 다른 지역·유형을 골라보세요.</div>
         ) : (
           <div className="state">해당 조건의 실거래가 아직 없어요. 기간이나 유형을 바꿔보세요.</div>
         )}
