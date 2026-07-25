@@ -30,6 +30,9 @@ logger = logging.getLogger("onjeon.data_pipeline")
 # 예외·로그 메시지의 serviceKey 값을 값 무관하게 제거(퍼센트 인코딩된 키도 잡는다).
 _KEY_RE = re.compile(r"(serviceKey=)[^&\s)'\"]+")
 
+# 전월세전환율 폴백 — 정식 값은 rules/market_params(jeonse_wolse_conversion_rate)에서 주입된다.
+_DEFAULT_CONVERSION_RATE = 0.055
+
 # 연립다세대(빌라) 매매 실거래가 (2026-07-19 실검증) — 오피스텔/전월세는 자매 엔드포인트
 DEFAULT_ENDPOINT = "https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade"
 
@@ -300,16 +303,15 @@ def fetch_deals(
     conversion_rate 미지정 시 0.055(전월세전환율 대표값) 사용.
     dong/jibun은 매물단위(건물) 시세 필터링용 — parse_trades/parse_rents의 값을 그대로 전달.
     """
-    kind = "trade" if deal_kind == "trade" else "rent"
-    xml_text = _fetch_xml(
-        lawd_cd,
-        ym,
-        deal_endpoint(building_type, kind),
-        service_key=service_key,
-        http_get=http_get,
-        retry_wait=retry_wait,
-    )
     if deal_kind == "trade":
+        xml_text = _fetch_xml(
+            lawd_cd,
+            ym,
+            deal_endpoint(building_type, "trade"),
+            service_key=service_key,
+            http_get=http_get,
+            retry_wait=retry_wait,
+        )
         return [
             {
                 "amount_krw": t["price_krw"],
@@ -320,9 +322,15 @@ def fetch_deals(
             }
             for t in parse_trades(xml_text)
         ]
-    rents = parse_rents(xml_text)
+    return fetch_rent_deals(
+        lawd_cd, ym, building_type, service_key=service_key, http_get=http_get,
+        retry_wait=retry_wait, conversion_rate=conversion_rate,
+    )[deal_kind]
+
+
+def _rent_rows(rents: list[dict], deal_kind: str, conv: float) -> list[dict]:
+    """전월세 파싱 결과 → deal_kind('jeonse'|'wolse')별 정규화 행."""
     if deal_kind == "wolse":
-        conv = conversion_rate if conversion_rate is not None else 0.055
         return [
             {
                 "amount_krw": round(r["monthly_rent_krw"] + r["deposit_krw"] * conv / 12),
@@ -345,6 +353,35 @@ def fetch_deals(
         for r in rents
         if r["monthly_rent_krw"] == 0
     ]
+
+
+def fetch_rent_deals(
+    lawd_cd: str,
+    ym: str,
+    building_type: str,
+    *,
+    service_key: str | None = None,
+    http_get=requests.get,
+    retry_wait=None,
+    conversion_rate: float | None = None,
+) -> dict[str, list[dict]]:
+    """전월세 1회 호출 → {'jeonse': [...], 'wolse': [...]}.
+
+    전세와 월세는 같은 엔드포인트의 같은 XML에서 나온다(월세금 0 여부로만 갈린다).
+    따로 호출하면 동일 응답을 두 번 받아 일일 쿼터를 두 배로 쓴다 — 서울 전 지역
+    워밍처럼 호출량이 큰 작업에서 차이가 크다(1년 기준 유형당 650→325회).
+    """
+    xml_text = _fetch_xml(
+        lawd_cd,
+        ym,
+        deal_endpoint(building_type, "rent"),
+        service_key=service_key,
+        http_get=http_get,
+        retry_wait=retry_wait,
+    )
+    rents = parse_rents(xml_text)
+    conv = conversion_rate if conversion_rate is not None else _DEFAULT_CONVERSION_RATE
+    return {kind: _rent_rows(rents, kind, conv) for kind in ("jeonse", "wolse")}
 
 
 def fetch_period(

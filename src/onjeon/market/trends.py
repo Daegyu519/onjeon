@@ -13,7 +13,7 @@ import logging
 
 import requests
 
-from onjeon.data_pipeline.molit import fetch_deals
+from onjeon.data_pipeline.molit import fetch_deals, fetch_rent_deals
 from onjeon.data_pipeline.regions import resolve_lawd_cd
 from onjeon.market import cache as cache_mod
 from onjeon.market.buckets import average_by_bucket, bucket_key
@@ -28,18 +28,32 @@ _KINDS = {"mae_price": "trade", "jun_price": "jeonse", "wolse_price": "wolse"}
 MIN_BUCKETS = 3
 
 
+def _to_cache_rows(raw: list[dict]) -> list[dict]:
+    """fetch 결과 → 캐시 행(평당가 환산). 면적 0 이하는 버린다(평당가 계산 불가)."""
+    return [{"deal_date": d["deal_date"],
+             "pyeong_krw": price_per_pyeong(d["amount_krw"], d["area_m2"]),
+             "dong": d["dong"],
+             "jibun": d["jibun"],
+             "area_m2": d["area_m2"]}
+            for d in raw if d["area_m2"] > 0]
+
+
 def _ensure_cached(conn, region, btype, kind, months, queried_at, **fetch_kw):
+    """kind('trade'|'jeonse'|'wolse')의 미캐시 월을 채운다.
+
+    전세·월세는 같은 전월세 응답에서 갈라지므로 한 번 받을 때 둘 다 저장한다 —
+    따로 호출하면 동일 XML을 두 번 받아 일일 쿼터를 두 배로 쓴다.
+    """
     for ym in months:
         if cache_mod.is_month_fetched(conn, region, btype, kind, ym):
             continue
-        raw = fetch_deals(region, ym, btype, kind, **fetch_kw)
-        deals = [{"deal_date": d["deal_date"],
-                  "pyeong_krw": price_per_pyeong(d["amount_krw"], d["area_m2"]),
-                  "dong": d["dong"],
-                  "jibun": d["jibun"],
-                  "area_m2": d["area_m2"]}
-                 for d in raw if d["area_m2"] > 0]
-        cache_mod.save_month(conn, region, btype, kind, ym, deals, queried_at)
+        if kind == "trade":
+            rows = {"trade": _to_cache_rows(fetch_deals(region, ym, btype, "trade", **fetch_kw))}
+        else:
+            both = fetch_rent_deals(region, ym, btype, **fetch_kw)
+            rows = {k: _to_cache_rows(v) for k, v in both.items()}
+        for deal_kind, deals in rows.items():
+            cache_mod.save_month(conn, region, btype, deal_kind, ym, deals, queried_at)
 
 
 def _filter(deals: list[dict], level: str, dong: str | None, jibun: str | None) -> list[dict]:
