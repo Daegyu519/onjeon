@@ -4,13 +4,13 @@ emoji: 🏠
 colorFrom: yellow
 colorTo: gray
 sdk: docker
-app_port: 7860
+app_port: 8000
 pinned: false
 ---
 
 <!-- 위 YAML은 Hugging Face Spaces 배포 설정입니다 (GitHub에서는 무시됨).
      Docker SDK로 FastAPI 단일 서버(api.main:app)를 구동합니다 — Dockerfile 참조.
-     ⚠️ app_port가 Dockerfile의 EXPOSE(8000)와 달라 HF 배포 전 정합 필요. -->
+     app_port는 Dockerfile의 EXPOSE/PORT(8000)와 반드시 같아야 합니다. -->
 
 # 온전(穩全) — 리스크 조정 주거비용 기반 청년 주거 의사결정 AI
 

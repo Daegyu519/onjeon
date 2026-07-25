@@ -40,7 +40,8 @@ const statOf = (arr) => {
 export default function App() {
   const [region, setRegion] = useState('관악구')
   const [buildingType, setBuildingType] = useState('rh')
-  const [period, setPeriod] = useState('1y')
+  // 6개월: 공개 배포 동봉 캐시가 담는 기간 — 첫 화면이 빈 구간 없이 채워진다.
+  const [period, setPeriod] = useState('6m')
   const [metric, setMetric] = useState('mae') // 헤드라인 지표: mae|jun|wolse
   const [dong, setDong] = useState(null)
   const [jibun, setJibun] = useState(null)
