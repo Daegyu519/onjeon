@@ -9,8 +9,8 @@ pinned: false
 ---
 
 <!-- 위 YAML은 Hugging Face Spaces 배포 설정입니다 (GitHub에서는 무시됨).
-     HF가 Streamlit 네이티브 SDK를 폐지해 Docker SDK로 Streamlit을 구동합니다
-     (Dockerfile 참조). -->
+     Docker SDK로 FastAPI 단일 서버(api.main:app)를 구동합니다 — Dockerfile 참조.
+     ⚠️ app_port가 Dockerfile의 EXPOSE(8000)와 달라 HF 배포 전 정합 필요. -->
 
 # 온전(穩全) — 리스크 조정 주거비용 기반 청년 주거 의사결정 AI
 
@@ -51,34 +51,80 @@ pinned: false
 
 ## 실행 방법
 
+현재 앱은 **FastAPI 단일 서버 + React(Vite) 프론트**다. `web/dist`를 FastAPI가 `/api`와
+함께 한 포트에서 서빙한다.
+
 ```bash
-# 의존성 설치 (최초 1회 — uv 필요)
+# 최초 1회 — 의존성
 uv venv --python 3.12 .venv
 uv pip install -p .venv -e ".[dev,llm]"
+( cd web && npm ci )
 
-# API 키 설정 (선택 — 없어도 오프라인 데모 동작)
-cp .env.example .env   # GEMINI_API_KEY, MOLIT_API_KEY 등 입력
+# API 키 — 시세는 MOLIT_API_KEY가 있어야 실데이터가 나온다
+cp .env.example .env   # MOLIT_API_KEY(필수), GEMINI/ANTHROPIC(선택)
 
 # 전체 테스트
 .venv/bin/python -m pytest
-
-# 데모 실행 → http://localhost:8501
-./run.sh                # 원클릭 (권장 — 올바른 .venv로 자동 기동)
-# 또는 직접:
-.venv/bin/python -m streamlit run app.py
-# ⚠️ 그냥 'streamlit run app.py'는 의존성 없는 전역 Python으로 실행돼 실패합니다
 ```
+
+목적에 맞는 것 하나만 쓰면 된다.
+
+| 목적 | 명령 | 접속 |
+|---|---|---|
+| 개발 (핫리로드) | `./dev.sh` | http://localhost:5180 · API 문서 `:8000/docs` |
+| 로컬 프로덕션 확인 | `./serve.sh` | http://localhost:8000 |
+| 외부 공개 (시연·심사) | `./tunnel.sh` | 발급된 공개 URL (`./tunnel.sh url`로 재확인, `stop`으로 종료) |
+
+> ⚠️ `./run.sh`는 구 Streamlit 데모(`app.py`, :8501)다. 시세 차트·전세/월세 비교·금액 입력은
+> 위 FastAPI 경로에만 있다.
+
+### 시세 캐시 워밍 (외부 API를 호출하는 유일한 경로)
+
+`./tunnel.sh`는 **읽기 전용**으로 뜬다(`ONJEON_PUBLIC_READONLY=1`). 인증 없는 공개 경로가
+국토부 API를 직접 타면 1요청이 최대 183회(5년=61개월×3종) 호출을 유발해, 누구나 운영자의
+실명 인증 서비스키 쿼터를 소진시킬 수 있기 때문이다. 그래서 공개 전에 캐시를 채운다.
+
+```bash
+# 기본: 관악구·빌라 1년
+.venv/bin/python scripts/warm_cache.py
+# 원하는 범위로
+.venv/bin/python scripts/warm_cache.py --regions 관악구 강남구 --types rh apt --period 1y
+```
+
+이미 받은 달은 건너뛰고, 예상 호출량을 먼저 출력한 뒤 1,000회를 넘으면 `--yes` 없이는
+거절한다(쿼터 사고 방지). 로컬 개발(`dev.sh`/`serve.sh`)은 온디맨드로 조회하므로 워밍이 없어도 된다.
+
+## 사용법 (화면)
+
+상단 탭 두 개다.
+
+1. **시세 흐름** — 지역·유형·기간을 고르면 국토부 실거래가 기반 평당가 추이가 나온다.
+   큰 숫자는 **매매/전세/월세 중 선택**할 수 있고(데이터 있는 지표만 노출), 월세는
+   보증금을 전월세전환율로 환산한 **실질 월세**로 별도 차트에 그린다. 거래가 희소한 구간은
+   선이 아니라 **점**으로 표시된다. 등기부 PDF를 올리면 지역·유형·법정동을 자동 채운다
+   (스캔본은 OCR로 읽고, 값이 틀릴 수 있어 확인 후 적용).
+2. **내 조건 진단** — 소득·자산·매물 조건을 넣으면 적정 주거비(RIR) 진단과 받을 수 있는
+   청년 금융지원(미자격 시 어느 조항에서 얼마 초과인지 반증까지)이 나온다.
+   전세보증금과 월세 조건을 둘 다 넣으면 **전세 vs 월세 연비용**을 혜택 반영해 비교한다.
+   금액 칸은 `1억 2천 3백만원`처럼 한글 단위로 써도 되고, 숫자는 3자리마다 콤마가 붙는다.
 
 ## 배포
 
-Hugging Face Spaces(무료 16GB)로 배포합니다 — 절차는 [docs/deploy-hf.md](docs/deploy-hf.md) 참조.
-(Streamlit Community Cloud는 무료 1GB라 이 ML 스택엔 부족해 이전했습니다.)
+- **현재 경로**: 로컬 + Cloudflare 터널(`./tunnel.sh`) — 무료·계정 불필요. 이 맥이 켜져 있는
+  동안만 유효하고, 재연결되면 URL이 바뀌므로 시연 직전에 띄워 링크를 전달한다.
+- **상시 공개(HF Spaces Docker)**: `deploy-hf.sh` 사용. 가기 전에 정리할 것 —
+  `README` `app_port`(7860) vs `Dockerfile EXPOSE`(8000) 정합, 작업 브랜치 푸시,
+  Space Secrets에 `MOLIT_API_KEY`, 그리고 컨테이너는 파일시스템이 휘발성이라
+  캐시가 비어 시작하므로 **이미지에 캐시 동봉**이 필요하다(`data/cache.db`가 현재
+  `.gitignore`·`.dockerignore` 양쪽에서 제외됨).
 
-- **API 키 없이 전 구간 데모 가능** (MockLLM 오프라인 경로).
-- `GEMINI_API_KEY`(우선) 또는 `ANTHROPIC_API_KEY` 설정 시 what-if 질의·L0 룰 추출이 실제 LLM으로 동작. 기본 모델은 `gemini-2.5-flash`이며 `ONJEON_MODEL`로 교체 가능.
+LLM 키(`GEMINI_API_KEY` 우선, 없으면 `ANTHROPIC_API_KEY`)는 what-if 질의·L0 룰 추출에만
+쓰이고, 없으면 MockLLM 오프라인 경로로 동작한다. 기본 모델은 `gemini-2.5-flash`,
+`ONJEON_MODEL`로 교체 가능.
 
 ## 상태
 
-- 현재 단계: MVP 수직 슬라이스 구현 완료 — L0~L4 전 레이어 + Streamlit UI + 테스트 81건
+- 현재 단계: L0~L4 전 레이어 + FastAPI/React 웹(시세 흐름·조건 진단) + 테스트 248건.
+  실거래가는 국토부 6종(아파트·연립다세대·오피스텔·단독다가구 × 매매·전월세) 실키 연동.
 - 남은 작업: 실제 등기부 샘플 10건 L1 정확도 표, `[확인]` 수치 전수 재검증 ([docs/workflow.md](docs/workflow.md) 체크리스트)
 - 원본 제안서: `KB_AI_Challenge_제안서_초안.md` (⚠️ `[확인]` 마커 항목은 최신 수치 검증 필요)
