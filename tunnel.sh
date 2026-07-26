@@ -31,6 +31,7 @@ DOMAIN="${ONJEON_NGROK_DOMAIN:-$(grep -m1 '^ONJEON_NGROK_DOMAIN=' .env 2>/dev/nu
 if [ "${1:-}" = "stop" ]; then
   pkill -f "$APP_PATTERN" 2>/dev/null || true
   pkill -f "ngrok http" 2>/dev/null || true
+  pkill -f "cloudflared tunnel" 2>/dev/null || true  # 구 경로 잔존 프로세스
   echo "🛑 앱·터널 종료됨. (도메인은 유지되므로 다시 켜면 같은 주소다)"
   exit 0
 fi
@@ -44,6 +45,23 @@ PORT="${1:-8000}"
 
 command -v ngrok >/dev/null || { echo "❌ ngrok 필요: brew install --cask ngrok"; exit 1; }
 [ -x .venv/bin/python ] || { echo "❌ .venv 필요: uv venv --python 3.12 .venv && uv pip install -p .venv -e ."; exit 1; }
+
+# 예시 값이 그대로 남아 있는 경우를 따로 잡는다. 그냥 넘기면 ngrok이
+# "Only paid plans may create endpoints with custom subdomains"(ERR_NGROK_313)를 뱉는데,
+# 유료 플랜 문제로 오해하기 쉽다 — 실제로는 '내 계정에 없는 도메인'을 요청한 것이다.
+if [ "$DOMAIN" = "abc123.ngrok-free.dev" ]; then
+  cat <<'EOF'
+❌ .env의 ONJEON_NGROK_DOMAIN이 예시 값(abc123.ngrok-free.dev) 그대로입니다.
+   내 계정에 배정된 실제 도메인으로 바꿔야 합니다(남의/없는 도메인은 유료 오류로 거절됨).
+
+   1) https://dashboard.ngrok.com/domains 접속
+   2) 이미 도메인이 있으면 그 값을 복사, 없으면 [+ New Domain] → 무료 dev 도메인 생성
+      (무료 플랜은 계정당 1개, 영구 유지)
+   3) .env의 값을 교체:
+        ONJEON_NGROK_DOMAIN=<복사한-도메인>.ngrok-free.dev
+EOF
+  exit 1
+fi
 
 if [ -z "$DOMAIN" ]; then
   cat <<'EOF'

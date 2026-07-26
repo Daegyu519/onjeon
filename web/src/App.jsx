@@ -40,8 +40,9 @@ const statOf = (arr) => {
 export default function App() {
   const [region, setRegion] = useState('관악구')
   const [buildingType, setBuildingType] = useState('rh')
-  // 6개월: 공개 배포 동봉 캐시가 담는 기간 — 첫 화면이 빈 구간 없이 채워진다.
-  const [period, setPeriod] = useState('6m')
+  // 1년: 현재 공개 경로(ngrok)는 로컬 캐시를 서빙하고 거기에 61개월×100조합이 들어 있다.
+  // (컨테이너 폴백의 동봉 캐시는 6개월이라 그 경우 뒷구간이 비는데, cache_only 안내가 처리한다)
+  const [period, setPeriod] = useState('1y')
   const [metric, setMetric] = useState('mae') // 헤드라인 지표: mae|jun|wolse
   const [dong, setDong] = useState(null)
   const [jibun, setJibun] = useState(null)
