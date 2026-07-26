@@ -8,3 +8,5 @@ web/dist
 data/cache.db
 .superpowers
 KB_AI_Challenge_*.md
+data/cache.db-wal
+data/cache.db-shm
