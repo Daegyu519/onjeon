@@ -83,6 +83,37 @@ class TestNoSilentFailure:
         with pytest.raises(SystemExit, match="XML"):
             fbr.fetch("key", "L1M")
 
+    def test_hf_shape_without_response_wrapper(self, monkeypatch):
+        """HF는 {"header","body"}로 주고 MOLIT은 {"response":{...}}로 준다.
+
+        회귀 지점: 한쪽만 가정했더니 200 OK인데 items가 빈 채로 조용히 넘어갔다.
+        실측 호출에서 잡았다 — 네트워크 없이 두 형태를 다 고정해둔다.
+        """
+        payload = (b'{"header":{"resultCode":"00","resultMsg":"\xec\xa0\x95\xec\x83\x81"},'
+                   b'"body":{"totalCount":1,"items":[{"bankNm":"\xea\xb5\xad\xeb\xaf\xbc\xec\x9d\x80'
+                   b'\xed\x96\x89","avgLoanRat2":3.49,"loanAmt":100,"cnt":987}]}}')
+
+        class FakeResp:
+            def read(self): return payload
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        monkeypatch.setattr(fbr.urllib.request, "urlopen", lambda *a, **k: FakeResp())
+        items = fbr.fetch("key", "L1M")
+        assert len(items) == 1 and items[0]["bankNm"] == "국민은행"
+
+    def test_error_result_code_raises(self, monkeypatch):
+        """200인데 header.resultCode가 오류인 경우 — 빈 결과로 흘리면 원인을 못 찾는다."""
+        class FakeResp:
+            def read(self):
+                return b'{"header":{"resultCode":"30","resultMsg":"SERVICE_KEY_IS_NOT_REGISTERED"},"body":{}}'
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        monkeypatch.setattr(fbr.urllib.request, "urlopen", lambda *a, **k: FakeResp())
+        with pytest.raises(SystemExit, match="30"):
+            fbr.fetch("key", "L1M")
+
     def test_json_response_parsed(self, monkeypatch):
         payload = (b'{"response":{"body":{"items":[{"bankNm":"KB\xea\xb5\xad\xeb\xaf\xbc\xec\x9d\x80'
                    b'\xed\x96\x89","avgLoanRat2":3.4,"loanAmt":100,"cnt":5}]}}}')

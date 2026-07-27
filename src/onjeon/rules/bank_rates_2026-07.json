@@ -1,0 +1,120 @@
+{
+  "version": "2026-07",
+  "queried_at": "2026-07-28",
+  "loan_ym": "L1M",
+  "source": {
+    "name": "한국주택금융공사_전세자금대출 고객 특성별 금리 정보",
+    "url": "https://www.data.go.kr/data/15082044/openapi.do",
+    "endpoint": "http://apis.data.go.kr/B551408/rent-loan-rate-multi-dimensional-info/dimensional-list",
+    "note": "HF 전세자금보증 담보 시중은행 대출의 실제 실행 금리. 은행 자체 홈페이지는 robots.txt가 크롤링을 금지하므로 공개 API만 쓴다."
+  },
+  "unit": "percent",
+  "banks": {
+    "경남은행": {
+      "weighted_avg_pct": 5.38,
+      "min_pct": 5.38,
+      "max_pct": 5.38,
+      "loan_count": 1,
+      "loan_amount": 5240000
+    },
+    "광주은행": {
+      "weighted_avg_pct": 4.95,
+      "min_pct": 4.95,
+      "max_pct": 4.95,
+      "loan_count": 1,
+      "loan_amount": 80000000
+    },
+    "국민은행": {
+      "weighted_avg_pct": 3.49,
+      "min_pct": 1.0,
+      "max_pct": 5.68,
+      "loan_count": 987,
+      "loan_amount": 131258120000
+    },
+    "기업은행": {
+      "weighted_avg_pct": 4.29,
+      "min_pct": 3.2,
+      "max_pct": 5.91,
+      "loan_count": 78,
+      "loan_amount": 7036430730
+    },
+    "농협은행": {
+      "weighted_avg_pct": 3.98,
+      "min_pct": 0.2,
+      "max_pct": 6.33,
+      "loan_count": 313,
+      "loan_amount": 34183605000
+    },
+    "부산은행": {
+      "weighted_avg_pct": 1.87,
+      "min_pct": 1.0,
+      "max_pct": 4.42,
+      "loan_count": 104,
+      "loan_amount": 11052070000
+    },
+    "수협중앙회": {
+      "weighted_avg_pct": 4.69,
+      "min_pct": 4.69,
+      "max_pct": 4.69,
+      "loan_count": 1,
+      "loan_amount": 66000000
+    },
+    "신한은행": {
+      "weighted_avg_pct": 3.59,
+      "min_pct": 1.0,
+      "max_pct": 6.12,
+      "loan_count": 504,
+      "loan_amount": 80195600000
+    },
+    "아이엠뱅크": {
+      "weighted_avg_pct": 4.98,
+      "min_pct": 1.88,
+      "max_pct": 5.33,
+      "loan_count": 11,
+      "loan_amount": 1047000000
+    },
+    "우리은행": {
+      "weighted_avg_pct": 4.19,
+      "min_pct": 3.46,
+      "max_pct": 6.48,
+      "loan_count": 583,
+      "loan_amount": 62469952000
+    },
+    "전북은행": {
+      "weighted_avg_pct": 1.2,
+      "min_pct": 1.2,
+      "max_pct": 1.2,
+      "loan_count": 1,
+      "loan_amount": 198000000
+    },
+    "카카오뱅크": {
+      "weighted_avg_pct": 3.75,
+      "min_pct": 3.33,
+      "max_pct": 4.87,
+      "loan_count": 979,
+      "loan_amount": 125089840000
+    },
+    "케이뱅크": {
+      "weighted_avg_pct": 3.84,
+      "min_pct": 3.35,
+      "max_pct": 4.69,
+      "loan_count": 474,
+      "loan_amount": 62731300000
+    },
+    "토스뱅크": {
+      "weighted_avg_pct": 4.0,
+      "min_pct": 3.61,
+      "max_pct": 5.58,
+      "loan_count": 1493,
+      "loan_amount": 179501600000
+    },
+    "하나은행": {
+      "weighted_avg_pct": 3.14,
+      "min_pct": 1.0,
+      "max_pct": 5.66,
+      "loan_count": 940,
+      "loan_amount": 138496053000
+    }
+  },
+  "overall_weighted_avg_pct": 3.676
+}

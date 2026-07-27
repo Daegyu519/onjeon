@@ -78,10 +78,19 @@ def fetch(service_key: str, loan_ym: str, *, rows: int = 100) -> list[dict]:
             f"   응답 앞부분: {raw[:300]}"
         )
     doc = json.loads(raw)
-    body = doc.get("response", {}).get("body", doc)
-    items = body.get("items", [])
+    # 공공데이터포털은 기관마다 래핑이 다르다. HF는 {"header":..,"body":..}로 오고
+    # 국토부(MOLIT)는 {"response":{"header":..,"body":..}}로 온다. 둘 다 받는다 —
+    # 한쪽만 가정하면 200 OK인데 items가 빈 채로 조용히 넘어간다(실제로 그랬다).
+    root = doc.get("response", doc)
+    header = root.get("header", {})
+    code = str(header.get("resultCode", "")).lstrip("0") or "0"
+    if code != "0":
+        raise SystemExit(f"❌ API 오류 {header.get('resultCode')}: {header.get('resultMsg')}")
+    items = root.get("body", {}).get("items", [])
     if isinstance(items, dict):  # 단건이면 dict로 온다
         items = items.get("item", [])
+    if isinstance(items, dict):
+        items = [items]
     return [i for i in items if isinstance(i, dict)]
 
 
