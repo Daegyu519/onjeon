@@ -1,13 +1,19 @@
 {
   "rule_id": "newlywed-jeonse-loan-2026-07",
   "product_name": "신혼가구 전용 버팀목전세자금대출",
-  "applies_to": ["jeonse"],
+  "applies_to": [
+    "jeonse"
+  ],
   "version": "2026-07 기준",
   "verified_at": "2026-07-27",
   "verify_note": "2026-07-27 웹 검증: 혼인 7년 이내(3개월 내 결혼예정자 포함 — 예정자는 입력 미수집이라 판정 제외), 부부합산 연소득 7,500만 이하, 순자산 3.45억 이하, 한도 수도권 3억·지방 2억(보증금 80% 이내), 금리 연 1.5~2.7%. 청년전용 버팀목과 **별개 상품**이라 룰을 분리했다 — 소득 상한(5,000만 vs 7,500만)과 한도가 다르다. 자녀 수 우대금리(1자녀 0.3%p·2자녀 0.5%p·3자녀 이상 0.7%p)는 terms에 기록만 하고 금리 계산에는 아직 반영하지 않는다(중복 우대 적용 순서 미확인).",
   "source": {
     "url": "https://kbthink.com/loan-guide/beotimok-newlyweds.html",
-    "clause_refs": ["대출대상", "대출한도", "대출금리"],
+    "clause_refs": [
+      "대출대상",
+      "대출한도",
+      "대출금리"
+    ],
     "source_note": "2차 출처(은행 안내). 주택도시기금 공식 포털(nhuf.molit.go.kr)은 JS 렌더라 자동 수집 실패 — 공식 요강으로 재검증 필요 [확인]"
   },
   "criteria": [
@@ -17,8 +23,14 @@
       "value": true,
       "clause": "대출대상 — 혼인기간 7년 이내 신혼가구",
       "boundary_tests": [
-        { "input": true, "expect": true },
-        { "input": false, "expect": false }
+        {
+          "input": true,
+          "expect": true
+        },
+        {
+          "input": false,
+          "expect": false
+        }
       ]
     },
     {
@@ -27,8 +39,14 @@
       "value": true,
       "clause": "대출대상 — 무주택 세대주",
       "boundary_tests": [
-        { "input": true, "expect": true },
-        { "input": false, "expect": false }
+        {
+          "input": true,
+          "expect": true
+        },
+        {
+          "input": false,
+          "expect": false
+        }
       ]
     },
     {
@@ -37,8 +55,14 @@
       "value": true,
       "clause": "대출대상 — 무주택 세대주",
       "boundary_tests": [
-        { "input": true, "expect": true },
-        { "input": false, "expect": false }
+        {
+          "input": true,
+          "expect": true
+        },
+        {
+          "input": false,
+          "expect": false
+        }
       ]
     },
     {
@@ -47,8 +71,14 @@
       "value": 75000000,
       "clause": "대출대상 — 부부합산 연소득 7,500만원 이하 [확인: 1억으로 완화 발표됐으나 시행 시점 미확인]",
       "boundary_tests": [
-        { "input": 75000000, "expect": true },
-        { "input": 75000001, "expect": false }
+        {
+          "input": 75000000,
+          "expect": true
+        },
+        {
+          "input": 75000001,
+          "expect": false
+        }
       ]
     },
     {
@@ -57,8 +87,14 @@
       "value": 345000000,
       "clause": "대출대상 — 순자산 3.45억원 이하 [확인: 최신 기준액]",
       "boundary_tests": [
-        { "input": 345000000, "expect": true },
-        { "input": 345000001, "expect": false }
+        {
+          "input": 345000000,
+          "expect": true
+        },
+        {
+          "input": 345000001,
+          "expect": false
+        }
       ]
     },
     {
@@ -67,19 +103,28 @@
       "value": true,
       "clause": "대출제한 — 은행 연체대출금(연체·대지급·대위변제 포함) 보유자, 신용도판단정보 등록자는 대출 불가. 신용'점수' 커트라인이 아니라 등록정보 유무로 판정한다",
       "boundary_tests": [
-        { "input": true, "expect": true },
-        { "input": false, "expect": false }
+        {
+          "input": true,
+          "expect": true
+        },
+        {
+          "input": false,
+          "expect": false
+        }
       ]
     }
   ],
-  "alternatives": ["youth-jeonse-loan-2026-07"],
+  "alternatives": [
+    "youth-jeonse-loan-2026-07",
+    "kb-youth-jeonse-2026-07"
+  ],
   "confidence": "medium",
   "approved_by_human": false,
   "terms": {
     "interest_rate": 0.027,
     "interest_rate_note": "소득·보증금 구간별 1.5~2.7%. 구간표 미수집이라 보수적 상단(2.7%) 적용 — 전세 비용 과소평가 방지 [확인]",
-    "limit_krw": 300000000,
-    "note": "한도 수도권 3억·지방 2억(보증금 80% 이내). 수도권 상단 적용 [확인: 지역별 분기 미구현]",
+    "limit_krw": 200000000,
+    "note": "한도 수도권 3억·지방 2억(보증금 80% 이내). 시도 미수집이라 **지방 기준 2억**을 적용한다 — 이 값이 비용 계산의 정책대출 한도로 쓰이므로, 넓게 잡으면 정책금리가 더 많은 금액에 붙어 전세 비용이 실제보다 싸게 나온다(결론 부호가 뒤집힐 수 있다)",
     "child_rate_discount": {
       "1": 0.003,
       "2": 0.005,
@@ -88,5 +133,13 @@
     }
   },
   "status": "active",
-  "product_type": "loan"
+  "product_type": "loan",
+  "channels": [
+    {
+      "name": "KB국민은행",
+      "url": "https://obank.kbstar.com/quics?page=C109362",
+      "note": "주택도시기금 수탁은행 — KB국민은행 영업점·KB스타뱅킹에서 신청"
+    }
+  ],
+  "is_policy_product": true
 }

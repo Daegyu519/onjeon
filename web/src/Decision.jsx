@@ -692,10 +692,32 @@ export default function Decision() {
           <h3 className="fin-title">받을 수 있는 청년 금융지원</h3>
           {res.recommendations.eligible.map((p) => (
             <div key={p.rule_id} className="fin-card ok">
-              <div className="fin-head"><span className="badge-ok">자격</span>{p.product_name}</div>
-              <div className="fin-terms">
-                {p.product_type === 'loan' ? `${rate(p.terms)}${limit(p.terms)}` : (p.terms.note || '지원 상품')}
+              <div className="fin-head">
+                <span className="badge-ok">자격</span>{p.product_name}
+                {/* provider 없이 그리면 "None 상품"이 뜬다 — 룰에 표시를 빠뜨렸을 때
+                    화면이 거짓말을 하는 대신 조용히 생략한다 */}
+                {p.is_policy_product === false && p.provider && (
+                  <span className="badge-bank">{p.provider} 상품</span>
+                )}
               </div>
+              <div className="fin-terms">
+                {p.product_type === 'loan'
+                  ? `${p.terms.rate_display ? `금리 ${p.terms.rate_display} · ` : rate(p.terms)}${limit(p.terms)}`
+                  : (p.terms.note || '지원 상품')}
+              </div>
+              {/* 어디서 신청하는지까지 말해야 판정이 행동으로 이어진다.
+                  정책상품은 수탁은행 창구, 은행 상품은 그 은행이다. */}
+              {p.channels?.length > 0 && (
+                <div className="fin-channel">
+                  신청 · {p.channels.map((c, i) => (
+                    <span key={i}>
+                      {i > 0 && ' / '}
+                      <a href={c.url} target="_blank" rel="noreferrer">{c.name}</a>
+                      {c.note ? ` — ${c.note}` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {res.recommendations.ineligible.map((p) => (
@@ -710,6 +732,26 @@ export default function Decision() {
                   </div>
                 ))}
               </div>
+              {/* 미자격 반증에서 문장을 끊지 않는다. 자격이 **실제로 되는** 대안만
+                  붙인다 — 안 되는 걸 대안이라고 내밀면 반증이 두 번 실패한다. */}
+              {p.alternatives?.length > 0 && (
+                <div className="fin-alt">
+                  대신 받을 수 있어요
+                  {p.alternatives.map((a) => (
+                    <div key={a.rule_id} className="fin-alt-row">
+                      · <b>{a.product_name}</b>
+                      {a.is_policy_product === false && ` (${a.provider} 상품)`}
+                      {a.rate_display
+                        ? ` — 금리 ${a.rate_display}`
+                        : a.interest_rate != null && ` — 금리 ${(a.interest_rate * 100).toFixed(1)}%`}
+                      {a.limit_krw ? ` · 한도 ${won(a.limit_krw)}원` : ''}
+                      {a.channels?.[0] && (
+                        <> · <a href={a.channels[0].url} target="_blank" rel="noreferrer">{a.channels[0].name}</a></>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {!res.recommendations.eligible.length && !res.recommendations.ineligible.length && (

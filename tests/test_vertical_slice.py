@@ -116,4 +116,7 @@ class TestEligibilityVerticalSlice:
         assert failed_fields == {"annual_income_krw", "works_at_sme"}  # 소득 초과 + 미재직
         income_failure = next(f for f in sme["failed"] if f["field"] == "annual_income_krw")
         assert income_failure["gap"] == 1_000_000
-        assert sme["alternatives"] == ["youth-jeonse-loan-2026-07"]
+        # evaluate()는 룰의 alternatives를 rule_id 그대로 준다(이름 붙이기는 recommend()가 한다).
+        # 소득 초과로 중기청이 막히면 정책 버팀목과 KB 자체 상품 둘 다 대안이 된다 —
+        # 정책상품이 먼저, 은행 상품이 그 다음이라는 순서도 룰에 담겨 있다.
+        assert sme["alternatives"] == ["youth-jeonse-loan-2026-07", "kb-youth-jeonse-2026-07"]

@@ -85,5 +85,6 @@
     "limit_krw": null,
     "note": "자산형성 적금(대출 아님): 만기 3년·월 50만·정부기여금 6%(우대 12%)·비과세. 청년도약계좌(종료) 후속."
   },
-  "alternatives": []
+  "alternatives": [],
+  "is_policy_product": true
 }

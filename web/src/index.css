@@ -856,11 +856,42 @@ button {
   color: var(--text);
 }
 .badge-ok,
-.badge-no {
+.badge-no,
+.badge-bank {
   font-size: 11px;
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
+}
+/* 은행 자체 상품 표식 — 정책상품과 섞이면 "정부 지원"으로 오해된다.
+   중립 회색이다. 자사 상품을 색으로 띄우면 미는 것처럼 보인다. */
+.badge-bank {
+  margin-left: 6px;
+  color: var(--text-3);
+  background: rgba(107, 118, 132, 0.1);
+}
+
+/* 신청 채널 · 대안 상품 — 판정에서 행동으로 넘어가는 줄 */
+.fin-channel,
+.fin-alt {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+.fin-alt {
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.fin-alt-row {
+  margin-top: 3px;
+  color: var(--text-2);
+}
+.fin-channel a,
+.fin-alt a {
+  color: var(--accent);
+  font-weight: 700;
 }
 .badge-ok {
   color: var(--mae);

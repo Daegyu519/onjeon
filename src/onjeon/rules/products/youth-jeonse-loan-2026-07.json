@@ -127,7 +127,9 @@
       ]
     }
   ],
-  "alternatives": [],
+  "alternatives": [
+    "kb-youth-jeonse-2026-07"
+  ],
   "confidence": "high",
   "approved_by_human": true,
   "terms": {
@@ -137,5 +139,13 @@
     "note": "한도 2억(보증금 80% 이내), 2026-07-18 검증"
   },
   "status": "active",
-  "product_type": "loan"
+  "product_type": "loan",
+  "channels": [
+    {
+      "name": "KB국민은행",
+      "url": "https://obank.kbstar.com/quics?page=C109362",
+      "note": "주택도시기금 수탁은행 — KB국민은행 영업점·KB스타뱅킹에서 신청"
+    }
+  ],
+  "is_policy_product": true
 }

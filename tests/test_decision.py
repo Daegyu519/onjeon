@@ -246,15 +246,49 @@ class TestRealRules:
         assert "jeonse" not in didimdol["applies_to"]
         assert "wolse" not in didimdol["applies_to"]
 
-    def test_jeonse_loan_has_usable_rate(self):
-        """금리가 null이면 비교에서 조용히 탈락한다 — 대표값이라도 있어야 한다."""
+    def test_policy_jeonse_loan_has_usable_rate(self):
+        """**정책상품**은 금리가 있어야 한다 — null이면 비용 비교에서 조용히 탈락한다.
+
+        은행 자체 상품은 예외다. COFIX+가산금리 변동이라 사전에 숫자로 확정할 수 없고,
+        지어낸 금리로 비용을 계산하면 자사 상품을 유리(또는 불리)하게 만든 셈이 된다.
+        대신 rate_display에 "COFIX + 가산금리(심사 시 결정)"를 문장으로 둔다.
+        """
         rentals = [
             p
             for p in load_products()
             if p.get("product_type") == "loan" and "jeonse" in p.get("applies_to", [])
         ]
         assert rentals, "전세용 대출 상품이 없다"
-        assert all(p["terms"].get("interest_rate") is not None for p in rentals)
+        for p in rentals:
+            if p.get("is_policy_product", True):
+                assert p["terms"].get("interest_rate") is not None, f"{p['rule_id']} 금리 없음"
+            else:
+                # 금리를 안 쓰는 대신 무엇으로 정해지는지는 반드시 밝혀야 한다
+                assert p["terms"].get("rate_display"), f"{p['rule_id']} rate_display 없음"
+
+    def test_bank_product_ranks_below_policy_products(self):
+        """자사 상품이 정책상품을 앞지르면 안 된다 — 숫자의 신뢰가 무너진다.
+
+        금리 null은 _rank_key에서 1.0으로 취급돼 맨 뒤로 간다. 이 동작이 깨지면
+        제품이 KB 상품을 밀어준 것처럼 보인다.
+        """
+        from onjeon.l3.recommend import recommend
+
+        user = {"age": 27, "annual_income_krw": 30_000_000, "assets_krw": 20_000_000,
+                "deposit_krw": 150_000_000, "is_homeless": True, "is_household_head": True,
+                "works_at_sme": False, "no_credit_delinquency": True, "is_newlywed": False}
+        eligible = recommend(user, load_products())["eligible"]
+        names = [r["rule_id"] for r in eligible]
+        assert "kb-youth-jeonse-2026-07" in names, "KB 상품이 자격에 없다"
+        kb_at = names.index("kb-youth-jeonse-2026-07")
+        # 비교 대상은 **금리가 확정된 정책 대출**뿐이다. 지원금·적금도 금리가 없어
+        # 뒤에 오지만 그건 대출이 아니라 순서를 논할 대상이 아니다.
+        rated_policy = [
+            i for i, r in enumerate(eligible)
+            if r.get("is_policy_product") and r["terms"].get("interest_rate") is not None
+        ]
+        assert rated_policy, "금리 있는 정책 대출이 하나도 없다 — 테스트 전제가 깨졌다"
+        assert kb_at > max(rated_policy), f"KB 상품이 정책 대출보다 앞에 있다: {names}"
 
     def test_monthly_support_has_structured_terms(self):
         support = next(

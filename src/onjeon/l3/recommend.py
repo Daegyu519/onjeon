@@ -13,10 +13,23 @@ from onjeon.l3.eligibility import evaluate
 # 판정 결과에 함께 실어보낼 룰 필드 → 없을 때의 기본값.
 # terms: 금리·한도·지원금 / product_type: loan|subsidy|savings
 # applies_to: jeonse|wolse|buy 용도 / source: 인용할 조항·원문 링크
-_CARRIED = {"terms": {}, "product_type": "loan", "applies_to": [], "source": {}}
+# channels: 어디서 신청하나(은행·창구) / provider: 취급 주체
+# is_policy_product: 정책 기금상품인가 은행 자체 상품인가 — 화면이 둘을 구분해 표기한다
+_CARRIED = {
+    "terms": {}, "product_type": "loan", "applies_to": [], "source": {},
+    "channels": [], "provider": None, "is_policy_product": False,
+}
 
 
 def _rank_key(result: dict):
+    """금리 오름차순 → 한도 내림차순. **싼 것이 먼저다.**
+
+    금리가 없는 상품(interest_rate=null)은 1.0으로 취급해 맨 뒤로 간다.
+    은행 자체 변동금리 상품(COFIX+가산)이 여기 해당한다 — 금리를 사전에 확정할 수
+    없으니 확정 금리를 가진 정책상품보다 앞에 세울 근거가 없다. 결과적으로
+    "정책상품이 먼저, 은행 상품은 그 다음"이 자연히 지켜진다. 이 순서가 뒤집히면
+    제품이 자사 상품을 밀어준 셈이 되어 숫자의 신뢰가 통째로 무너진다.
+    """
     terms = result["terms"]
     rate = terms.get("interest_rate")
     return (rate if rate is not None else 1.0, -(terms.get("limit_krw") or 0))
@@ -39,4 +52,25 @@ def recommend(profile: dict, products: list[dict]) -> dict:
             result[key] = product.get(key, _CARRIED[key])
         (ranked if result["eligible"] else rejected).append(result)
     ranked.sort(key=_rank_key)
+
+    # 미자격 상품의 alternatives는 rule_id 목록이라 화면이 그대로 쓸 수 없다.
+    # "당신은 소득 초과로 X가 안 됩니다" 뒤에 "→ 대신 Y는 됩니다"를 붙이려면
+    # 이름과 자격 여부가 필요하다. 자격이 실제로 되는 대안만 남긴다 —
+    # 안 되는 걸 대안이라고 내밀면 반증이 두 번 실패하는 셈이다.
+    by_id = {r["rule_id"]: r for r in ranked + rejected}
+    for result in rejected:
+        result["alternatives"] = [
+            {
+                "rule_id": alt_id,
+                "product_name": by_id[alt_id]["product_name"],
+                "provider": by_id[alt_id]["provider"],
+                "is_policy_product": by_id[alt_id]["is_policy_product"],
+                "rate_display": by_id[alt_id]["terms"].get("rate_display"),
+                "interest_rate": by_id[alt_id]["terms"].get("interest_rate"),
+                "limit_krw": by_id[alt_id]["terms"].get("limit_krw"),
+                "channels": by_id[alt_id]["channels"],
+            }
+            for alt_id in result.get("alternatives") or []
+            if alt_id in by_id and by_id[alt_id]["eligible"]
+        ]
     return {"eligible": ranked, "ineligible": rejected}

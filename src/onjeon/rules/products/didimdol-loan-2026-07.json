@@ -106,6 +106,14 @@
     "note": "한도 일반 2억(생애최초 2.4억/신혼 3.2억), LTV 70%. 주택 구입자금."
   },
   "alternatives": [
-    "청년전용 버팀목전세자금대출"
-  ]
+    "youth-jeonse-loan-2026-07"
+  ],
+  "channels": [
+    {
+      "name": "KB국민은행",
+      "url": "https://obank.kbstar.com/quics?page=C109362",
+      "note": "주택도시기금 수탁은행 — KB국민은행 영업점·KB스타뱅킹에서 신청"
+    }
+  ],
+  "is_policy_product": true
 }
