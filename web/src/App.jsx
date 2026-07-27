@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import Decision from './Decision'
+import MarketMap from './MarketMap'
 
 const SEOUL_GU = [
   '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구',
@@ -52,7 +53,9 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [show, setShow] = useState({ mae: true, jun: true })
-  const [view, setView] = useState('trends')
+  // 기본 탭 = 비교. 제품이 답하는 질문이 "전세가 월세보다 싼가"라서 첫 화면이 그 답이어야
+  // 한다. 시세·지도는 그 숫자의 근거이므로 뒤로 보낸다.
+  const [view, setView] = useState('decide')
   const [pendingReg, setPendingReg] = useState(null)
 
   useEffect(() => {
@@ -97,6 +100,17 @@ export default function App() {
     setDong(b.dong || null)
     setJibun(b.jibun || null)
     setPendingReg(null)
+  }
+
+  // 지도에서 동을 고르면 그 동네의 시세 흐름으로 넘어간다. 등기부 맥락(propertyInfo)과
+  // 지번은 지운다 — 다른 동네를 골랐는데 이전 매물 주소가 헤더에 남으면 어느 곳의
+  // 숫자인지 오해하게 된다.
+  function pickDong(pickedRegion, pickedDong) {
+    if (SEOUL_GU.includes(pickedRegion)) setRegion(pickedRegion)
+    setDong(pickedDong || null)
+    setJibun(null)
+    setPropertyInfo(null)
+    setView('trends')
   }
 
   const junUnavailable = data?.unavailable?.includes('jun_price')
@@ -210,15 +224,49 @@ export default function App() {
     <div className="app">
       <div className="brand">
         <span className="logo">온전</span>
-        <span className="tag">이 집, 주변 시세는 어떻게 흘러왔나</span>
+        <span className="tag">온전히 내 집을 가질 그날까지</span>
       </div>
 
       <div className="tabs">
+        <button className={view === 'decide' ? 'on' : ''} onClick={() => setView('decide')}>전세 vs 월세</button>
+        <span className="tab-sep">근거</span>
         <button className={view === 'trends' ? 'on' : ''} onClick={() => setView('trends')}>시세 흐름</button>
-        <button className={view === 'decide' ? 'on' : ''} onClick={() => setView('decide')}>내 조건 진단</button>
+        <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>동네 지도</button>
       </div>
 
-      {view === 'decide' ? <Decision /> : (
+      {view === 'decide' ? <Decision /> : view === 'map' ? (
+      <>
+        <section className="hero">
+          <div className="context">서울 전체 · {TYPE_LABEL[buildingType]} · 법정동별 평당가</div>
+          <div className="seg metric-seg">
+            {METRICS.map((m) => (
+              <button key={m.k} className={metric === m.k ? 'on' : ''} onClick={() => setMetric(m.k)}>
+                {m.tab}
+              </button>
+            ))}
+          </div>
+          <div className="controls">
+            <select className="select" value={buildingType} onChange={(e) => setBuildingType(e.target.value)}>
+              {BUILDING_TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+            </select>
+            <div className="seg">
+              {PERIODS.map((p) => (
+                <button key={p.v} className={period === p.v ? 'on' : ''} onClick={() => setPeriod(p.v)}>
+                  {p.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+        <MarketMap
+          buildingType={buildingType}
+          period={period}
+          metric={metric}
+          typeLabel={TYPE_LABEL[buildingType]}
+          onPick={pickDong}
+        />
+      </>
+      ) : (
       <>
       {pendingReg && (
         <div className={`confirm ${pendingReg.ocr ? 'ocr' : ''}`}>

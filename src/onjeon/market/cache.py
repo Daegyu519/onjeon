@@ -18,6 +18,11 @@ CREATE TABLE IF NOT EXISTS deal_cache (
 );
 CREATE INDEX IF NOT EXISTS idx_deal_lookup
   ON deal_cache (region_code, building_type, deal_kind, ym);
+CREATE TABLE IF NOT EXISTS dong_geo (
+  region_code TEXT, dong TEXT, lat REAL NOT NULL, lng REAL NOT NULL,
+  queried_at TEXT NOT NULL,
+  PRIMARY KEY (region_code, dong)
+);
 """
 
 
@@ -64,6 +69,19 @@ def save_month(conn, region, btype, kind, ym, deals, queried_at) -> None:
         ],
     )
     conn.commit()
+
+
+def save_dong_geo(conn, region, dong, lat, lng, queried_at) -> None:
+    """법정동 중심좌표 저장(WGS84). 지오코딩은 배치 1회뿐이라 런타임 호출은 없다."""
+    conn.execute("INSERT OR REPLACE INTO dong_geo VALUES (?,?,?,?,?)",
+                 (region, dong, lat, lng, queried_at))
+    conn.commit()
+
+
+def load_dong_geo(conn) -> dict[tuple[str, str], tuple[float, float]]:
+    """{(구코드, 법정동): (lat, lng)}. 동 이름은 구 간 중복(신사동·사당동)이라 키가 쌍이다."""
+    return {(r, d): (lat, lng)
+            for r, d, lat, lng in conn.execute("SELECT region_code, dong, lat, lng FROM dong_geo")}
 
 
 def load_deals(conn, region, btype, kind, months) -> list[dict]:
