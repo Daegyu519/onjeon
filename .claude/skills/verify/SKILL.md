@@ -18,8 +18,12 @@ curl -s http://localhost:8501/_stcore/health   # → "ok"
 ## 전체 스크립트 실행 (렌더 경로 오류 탐지)
 
 ```bash
-.venv/bin/python app.py   # bare 모드 — st.* 는 no-op, Python 예외는 그대로 드러남. exit 0 기대
+.venv/bin/python app.py   # bare 모드 — st.* 는 no-op, Python 예외는 그대로 드러남
 ```
+
+- **현재 exit 1이 정상이다**(2026-07-27 확인). st.* 가 no-op이라 업로드 입력이 `None`으로
+  내려가 `l1/schema.gate`가 `ExtractionInvalid: <root>: None is not of type 'object'`로 멈춘다.
+  회귀 판단은 **에러 메시지가 이것과 같은지**로 한다 — 다른 예외면 그때가 진짜 회귀다.
 
 ## 패키지 경계 구동 (수직 슬라이스)
 

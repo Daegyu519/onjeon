@@ -4,39 +4,27 @@
 
 ---
 
-## 1. 배포 API에 E[Loss] 배선 — `decision.py`의 `e_loss=0` 연결
+## 1. ~~배포 API에 E[Loss] 배선~~ — 완료 (2026-07-27)
 
-**What:** `src/onjeon/decision.py`의 `_rental_annual_cost()`(L35)와 `compare_jeonse_wolse()`(L79)가
-`engine.annual_cost_jeonse(..., e_loss=0)`으로 호출한다. 여기에 실제 기대손실
-(`P(사고) × LGD × 보증금`)을 연결한다.
+**해결:** `decision.py::_risk()`가 `P(사고) × LGD × 보증금`을 계산해
+`breakdown["미회수기대손실"]`로 넣는다. 전세·월세 대칭 계산(월세는 보증금이 작아
+회수액이 덮으면 자연히 0). 입력이 없으면 `risk.adjusted=False` + 사유를 남기고
+0으로 조용히 계산하지 않는다.
 
-**Why:** 프로젝트 한 줄 요약이 *"보증금 미회수 위험을 원(₩) 단위 기대손실로 환산하여
-리스크 조정 총비용을 비교"*다. 배포 API(`api.main` → `onjeon.decision`)가 산출하는
-전세 비용에 그 항이 빠져 있어서, 공개 URL 사용자는 프로젝트의 대표 숫자를 볼 수 없다.
-README 헤드라인 *"미회수 기대손실 연 180만원을 반영하면…"*이 배포 화면에서 재현되지 않는다.
+**Cons로 적혔던 것이 해결된 방식:** "scikit-learn을 배포 경로로 끌고 와야 한다 →
+`requirements-api.txt`가 슬림해진 근거가 깨진다"였는데, 그럴 필요가 없었다.
+로지스틱 회귀의 추론은 시그모이드 한 줄이라 학습된 계수만 있으면 stdlib으로 충분하다.
+`scripts/dump_risk_model.py`가 계수를 `rules/risk_model_2026-07.json`으로 덤프하고
+`l2.model.load_risk_model()`이 읽는다. numpy·pandas·sklearn import는 학습 함수 안으로
+옮겼고, `tests/test_risk_wiring.py`가 최상단 import를 정적으로 검사한다.
+실측: `requirements-api.txt`만 설치한 venv에서 `import api.main` + E[Loss] 산출 성공.
 
-**현재 상태 — 버그가 아니라 의도된 슬라이스 경계다.** `decision.py:4-5` 주석:
-*"3안 비교(compare_options)는 전체 매물문서·리스크모델이 필요해 이번 슬라이스에선
-제외한다(연결은 이후)."* `engine.expected_loss()`는 구현돼 있고 `compare.py:70`에서
-호출되지만, `compare.py`는 Streamlit(app.py) 전용이라 배포 경로에 없다.
+**선행조건도 해결:** `/api/decision`이 pydantic 스키마(`extra="forbid"`)를 쓰고
+`senior_claims_krw`·`building_type`·`exclusive_area_m2`·`insured`를 받는다. 시세 미입력 시
+캐시 평당가 × 전용면적으로 추정한다(`market.pyeong.estimate_market_price_krw`, 항상 캐시만).
 
-**Pros:** 출품작 차별점이 배포된 제품에서 실제로 동작한다. 심사에서 헤드라인 주장과
-화면이 일치한다. `engine.expected_loss()`·`l2` 모델이 이미 있어 신규 수식은 없다.
-
-**Cons:** L2 리스크 모델(`scikit-learn`)과 등기부 파싱 입력을 배포 경로로 끌고 와야 한다.
-`requirements-api.txt`가 63MB로 슬림해진 근거(런타임 미사용 ML 스택 제외, 커밋 `7485de9`)가
-깨진다. 컨테이너 크기·콜드스타트 재검토 필요.
-
-**시작점:**
-1. `src/onjeon/compare.py:70` — `engine.expected_loss(p, lgd, deposit)` 호출부가 레퍼런스.
-2. `api/main.py:85` `/api/decision`이 받는 body에 등기부 유래 필드(채권최고액·선순위·시세)가
-   없다 — 입력 스키마 확장이 선행돼야 한다.
-3. L2 없이 가는 경로도 검토: 지역·전세가율 기반 룰 테이블로 P(사고)를 근사하면
-   `scikit-learn`을 배포에 안 넣어도 된다. 정확도 vs 컨테이너 크기 트레이드오프.
-
-**Depends on / blocked by:** `/api/decision` 입력 스키마 확장. 등기부 파싱 결과를
-API로 넘기는 경로(현재 업로드는 되지만 decision과 연결 안 됨).
-
-**출처:** 2026-07-25 `/plan-eng-review` 아웃사이드 보이스가 발견, D5=A로 분리 결정.
+**남은 것:** 채권최고액 regex 자동 추출(현재는 수동 입력). `register/parse.py`에
+을구 근저당 패턴을 추가하면 등기부 업로드로 자동 채움 — 실패해도 수동 입력이
+1차 경로라 기능은 동작한다.
 
 ---
