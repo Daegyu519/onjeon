@@ -13,17 +13,18 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-FEATURES = ["jeonse_ratio", "lien_ratio", "is_villa", "auction_rate"]
+# 피처 순서·데이터 한계 문구는 model.py(추론 쪽)가 소유하고 여기서 재수출한다.
+# 반대 방향이면 model.py가 이 모듈을 끌어와 numpy·pandas가 배포 런타임에 필요해진다.
+from onjeon.l2.model import DATA_NOTE, FEATURES  # noqa: F401 — 재수출
 
 # 데이터 생성용 진짜 계수 — 전세가율·근저당비율↑ 위험↑, 낙찰가율↑ 위험↓
 TRUE_COEF = {"jeonse_ratio": 5.0, "lien_ratio": 3.0, "is_villa": 0.8, "auction_rate": -2.0}
 # 절편: 실 HUG 사고율 2.2%(2025-08)에 모집단 평균 정렬 (측정: 평균 2.1%)
 TRUE_INTERCEPT = -7.5
 
-# 실 공개 통계 기저율 (참조·문서화용)
-HUG_BASE_ACCIDENT_RATE = 0.022  # 전세보증금반환보증 사고율, 2025-08 기준 [출처 확인됨]
-
-DATA_NOTE = "합성 데이터 — 구조 시연 목적, 기저율은 실 HUG 사고율 2.2%(2025-08)에 앵커"
+# 실 공개 통계 기저율 (참조·문서화용). **연간** 사고율이다 — P(사고)의 시간 단위가
+# 여기서 정해지고, engine.expected_loss가 그대로 곱해 연간 기대손실을 만든다.
+HUG_BASE_ACCIDENT_RATE = 0.022  # 전세보증금반환보증 연 사고율, 2025-08 기준 [출처 확인됨]
 
 
 def generate(n: int = 1500, seed: int = 42) -> pd.DataFrame:

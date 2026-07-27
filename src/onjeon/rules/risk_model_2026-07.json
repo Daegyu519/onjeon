@@ -1,0 +1,33 @@
+{
+  "version": "2026-07",
+  "queried_at": "2026-07-27",
+  "model": "logistic_regression",
+  "features": [
+    "jeonse_ratio",
+    "lien_ratio",
+    "is_villa",
+    "auction_rate"
+  ],
+  "coef": {
+    "jeonse_ratio": 2.8996952106786287,
+    "lien_ratio": 1.5473954323668015,
+    "is_villa": 0.49297694735876035,
+    "auction_rate": -0.7701561526270819
+  },
+  "intercept": -5.9449117569867305,
+  "feature_means": {
+    "jeonse_ratio": 0.4996434455974755,
+    "lien_ratio": 0.3995102481119422,
+    "is_villa": 0.4846666666666667,
+    "auction_rate": 0.7677601797645611
+  },
+  "data_note": "합성 데이터 — 구조 시연 목적, 기저율은 실 HUG 사고율 2.2%(2025-08)에 앵커",
+  "prob_timescale": "annual",
+  "prob_timescale_note": "P(사고)는 연간 확률이다. 절편이 HUG 전세보증금반환보증 연 사고율 2.2%(2025-08)에 앵커돼 있고(생성 절편 -7.5), 합성 모집단 실측 평균은 2.13%다. engine.expected_loss가 이 값을 곱해 연간 기대손실을 낸다 — 계약기간(2년) 확률로 오해해 나누면 안 된다.",
+  "train_note": "scripts/dump_risk_model.py로 생성. onjeon.l2.synth.generate(n=1500, seed=42) 합성 데이터 + sklearn LogisticRegression(max_iter=1000). 재현 가능.",
+  "limitations": [
+    "합성 데이터 학습 — 성능 주장 아님, 구조 시연 목적 (CLAUDE.md 원칙 5)",
+    "등기부 외 리스크(체납·다가구 선순위 임차인 등) 미커버",
+    "실데이터(KB 전세대출·보증사고) 결합은 고도화 로드맵"
+  ]
+}
