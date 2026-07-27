@@ -16,3 +16,4 @@ data/registers_raw/
 # WAL 모드(cache.py open_cache) 사이드카 — 런타임 산물, 커밋 대상 아님
 data/cache.db-wal
 data/cache.db-shm
+.gstack/

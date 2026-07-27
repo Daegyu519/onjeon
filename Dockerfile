@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tesseract-ocr tesseract-ocr-kor \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-# 런타임 최소 의존성만 설치(requirements.txt는 Streamlit·RAG·L2까지 포함해 11배 무겁다).
+# 런타임 최소 의존성만 설치(pyproject의 [dev,llm]은 Streamlit·RAG·L2까지 포함해 11배 무겁다).
 # 컨테이너는 app.py를 복사하지 않고 FastAPI만 띄우므로 그쪽 의존성은 쓰이지 않는다.
 COPY requirements-api.txt .
 RUN pip install --no-cache-dir -r requirements-api.txt

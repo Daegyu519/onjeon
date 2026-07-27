@@ -58,11 +58,9 @@ YELLOW_TINT = "rgba(255, 204, 0, 0.15)" # 노란색 글래스 틴트
 import matplotlib.font_manager as _fm
 
 for _font_path in _fm.findSystemFonts(fontpaths=["/usr/share/fonts/truetype/nanum"]):
-    _fm.fontManager.addfont(_font_path)  # Streamlit Cloud(Linux)
-# NanumGothic은 로컬(설치됨)·Cloud(packages.txt fonts-nanum) 양쪽에서 동작 —
-# 차트 한글 깨짐(두부) 방지의 핵심. AppleGothic은 Mac 로컬 폴백.
-# NanumGothic만 지정 — 로컬(설치됨)·Cloud(fonts-nanum) 공통 동작.
-# AppleGothic 등 Mac 전용 폰트를 목록에 두면 Linux(Cloud)에서 렌더마다
+    _fm.fontManager.addfont(_font_path)  # Linux 배포 시 nanum 경로(로컬 Mac에선 no-op)
+# NanumGothic만 지정 — 차트 한글 깨짐(두부) 방지의 핵심.
+# AppleGothic 등 Mac 전용 폰트를 목록에 두면 Linux에서 렌더마다
 # 'findfont not found' 경고가 수천 줄 로그를 도배하므로 제외.
 matplotlib.rcParams["font.family"] = ["NanumGothic", "sans-serif"]
 matplotlib.rcParams["axes.unicode_minus"] = False
@@ -412,7 +410,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 
 st.title("온전(穩全)")
 st.caption(
-    '"이 집, 위험을 감안하면 전세가 월세보다 정말 싼가?" — '
+    '"온전히 내 집을 가질 그날까지 도와줄게" — '
     "숫자는 결정론 엔진(L3)과 ML(L2)이, 해석·인용만 LLM이 담당합니다."
 )
 

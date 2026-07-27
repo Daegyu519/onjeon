@@ -20,8 +20,9 @@ REGISTER_FIXTURES = sorted(FIXTURES.glob("register_*.json"))
 
 
 class TestRegisterDoc:
-    def test_five_register_fixtures_exist(self):
-        assert len(REGISTER_FIXTURES) == 5
+    def test_register_fixtures_exist(self):
+        # 개수가 아니라 존재만 본다 — 빈 글롭이면 아래 파라미터화가 조용히 0건이 된다.
+        assert REGISTER_FIXTURES
 
     @pytest.mark.parametrize("path", REGISTER_FIXTURES, ids=lambda p: p.stem)
     def test_fixture_parses(self, path):

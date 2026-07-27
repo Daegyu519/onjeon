@@ -1,12 +1,18 @@
 # 컨테이너(api.main:app) 런타임 최소 의존성.
 #
-# requirements.txt는 Streamlit 데모·RAG·L2까지 포함해 무겁다(streamlit·pandas·numpy·
-# scikit-learn·matplotlib·fastembed(onnxruntime)…). 컨테이너는 app.py를 복사하지 않고
+# pyproject.toml의 [dev,llm]은 Streamlit 데모·RAG·L2까지 포함해 무겁다(streamlit·pandas·
+# numpy·scikit-learn·matplotlib·fastembed(onnxruntime)…). 컨테이너는 app.py를 복사하지 않고
 # FastAPI만 띄우므로 그 전부가 쓰이지 않는다 — 무료 티어 디스크(예: Koyeb 2GB)와
 # 빌드 시간(무료 500분/월)을 아끼려 런타임에 실제로 import되는 것만 남겼다.
 #
 # 검증: api/main.py에서 시작해 onjeon 모듈을 정적 추적한 외부 패키지 목록과 일치.
-# 갱신 시: 이 파일만 설치한 깨끗한 venv에서 `import api.main`이 되는지 확인할 것.
+# 갱신 시(또는 onjeon의 최상단 import를 건드렸으면) 반드시 실행:
+#
+#     ./scripts/check_api_deps.sh
+#
+# 이 파일만 설치한 깨끗한 venv를 만들어 `import api.main` + E[Loss] 산출까지 돌리고,
+# numpy·pandas·sklearn이 sys.modules에 없는지 확인한다. l2/model.py의 학습 함수 안에
+# 넣어둔 import를 최상단으로 되돌리면 로컬 테스트는 전부 통과하는데 컨테이너만 죽는다.
 
 fastapi>=0.115
 uvicorn[standard]>=0.30
