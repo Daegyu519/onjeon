@@ -139,14 +139,25 @@ def _best_policy_loan(kind: str, eligible: list[dict], market_rate: float) -> di
     }
 
 
-def _funding_breakdown(deposit, assets, policy, market_rate, opportunity_rate) -> dict:
-    """보증금 조달비용을 (정책대출이자, 시장대출이자, 기회비용)으로 분해한다."""
+def _funding_breakdown(deposit, assets, policy, market_rate, opportunity_rate):
+    """보증금 조달비용을 (정책대출이자, 시장대출이자, 기회비용)으로 분해한다.
+
+    → (비용 dict, 산정근거 dict). 근거를 같이 내는 이유: 화면에 "얼마"만 있고
+    "무엇에 몇 %를 곱했는지"가 없으면 사용자가 숫자를 검증할 수 없다. 금리는
+    전부 가정값이고 일부는 아직 `[확인]`이라 더더욱 드러내야 한다(CLAUDE.md 원칙 2·5).
+    """
     own, policy_amt, market_amt = engine.split_funding_policy(deposit, assets, policy["limit"])
-    return {
+    costs = {
         "정책대출이자": round(policy_amt * policy["rate"]),
         "시장대출이자": round(market_amt * market_rate),
         "보증금기회비용": round(own * opportunity_rate),
     }
+    basis = {
+        "own_krw": own, "policy_krw": policy_amt, "market_krw": market_amt,
+        "policy_rate": policy["rate"], "market_rate": market_rate,
+        "opportunity_rate": opportunity_rate,
+    }
+    return costs, basis
 
 
 def _price_band(listing: dict, uncertainty_rule: dict | None) -> float:
@@ -288,7 +299,7 @@ def compare_jeonse_wolse(
     # 전세 — 전세용 정책대출을 한도까지만, 초과분은 시장금리
     jz_elig = recommend(_eligibility_input(profile, jeonse), products)["eligible"]
     jz_loan = _best_policy_loan("jeonse", jz_elig, market_rate)
-    jz_break = _funding_breakdown(
+    jz_break, jz_basis = _funding_breakdown(
         jeonse["deposit_krw"], assets, jz_loan, market_rate, opp
     )
     jz_risk = _risk(
@@ -316,12 +327,13 @@ def compare_jeonse_wolse(
         priority_rule=market_params.get("small_deposit_priority"),
         uncertainty_rule=market_params.get("price_uncertainty_by_level"),
     )
+    ws_funding, ws_basis = _funding_breakdown(ws_deposit, assets, ws_loan, market_rate, opp)
     ws_break = {
         "연월세": annual_rent,
         "월세세액공제": -engine.wolse_tax_credit(
             annual_rent, profile["monthly_income_krw"] * 12, tax_rules
         ),
-        **_funding_breakdown(ws_deposit, assets, ws_loan, market_rate, opp),
+        **ws_funding,
         "청년월세지원": -support,
         "미회수기대손실": ws_risk.get("e_loss_krw", 0),
     }
@@ -336,6 +348,7 @@ def compare_jeonse_wolse(
             "product_name": jz_loan["product_name"],
             "loan_benefit": jz_loan["product_name"] is not None,
             "loan_source": jz_loan["source"],
+            "funding": jz_basis,
             "risk": jz_risk,
         },
         "wolse": {
@@ -351,10 +364,19 @@ def compare_jeonse_wolse(
             "support_source": support_source,
             "support_stay_years": stay_years,
             "monthly_support": support > 0,
+            "funding": ws_basis,
             "risk": ws_risk,
         },
         "cheaper": "전세" if jz_cost < ws_cost else "월세",
         "diff_krw": abs(jz_cost - ws_cost),
+        # 두 안이 공유하는 금리와 그 근거. 정책금리는 상품마다 달라 각 안의 loan_rate에 있다.
+        # 전부 가정값이고 일부는 아직 검증 전(`[확인]`)이라 화면이 감추면 안 된다.
+        "rates": {
+            "market_loan": market_rate,
+            "opportunity": opp,
+            "market_loan_source": market_params.get("loan_rate_source", ""),
+            "opportunity_source": market_params.get("opportunity_source", ""),
+        },
     }
 
 

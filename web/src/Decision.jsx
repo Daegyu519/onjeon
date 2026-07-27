@@ -565,6 +565,34 @@ export default function Decision() {
                 )}
               </>
             )}
+            {jw.rates && (
+              // 적용 금리를 감추지 않는다. 전부 가정값이고 시중금리는 아직 데모 대표값이라
+              // 사용자가 "내 견적과 다르다"를 판단할 수 있어야 한다 (CLAUDE.md 원칙 2·5).
+              <li>
+                <b>적용 금리</b> — 이 숫자들이 위 금액을 만들었어요
+                <div className="rate-rows">
+                  {[['전세', jw.jeonse], ['월세', jw.wolse]].map(([label, plan]) => plan.funding && (
+                    <div key={label} className="rate-row">
+                      <span className="rate-plan">{label}</span>
+                      {plan.funding.policy_krw > 0 && (
+                        <span>정책대출 {won(plan.funding.policy_krw)}원 × <b>{(plan.funding.policy_rate * 100).toFixed(1)}%</b>
+                          {plan.product_name ? ` (${plan.product_name})` : ''}</span>
+                      )}
+                      {plan.funding.market_krw > 0 && (
+                        <span>시중대출 {won(plan.funding.market_krw)}원 × <b>{(plan.funding.market_rate * 100).toFixed(1)}%</b></span>
+                      )}
+                      {plan.funding.own_krw > 0 && (
+                        <span>내 돈 {won(plan.funding.own_krw)}원 × <b>{(plan.funding.opportunity_rate * 100).toFixed(1)}%</b> (기회비용)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="cite">
+                  기회비용 {(jw.rates.opportunity * 100).toFixed(1)}% — {jw.rates.opportunity_source}
+                </div>
+                <div className="cite">시중대출 {(jw.rates.market_loan * 100).toFixed(1)}% — {jw.rates.market_loan_source}</div>
+              </li>
+            )}
             <li className="ver">
               세제·시장 룰 {res.sources.tax_rules_version} / {res.sources.market_params_version} 기준
               {jw.jeonse.risk.adjusted && ` · ${jw.jeonse.risk.data_note}`}

@@ -749,6 +749,30 @@ button {
   line-height: 1.55;
   color: var(--text-3);
 }
+/* 적용 금리 — 금액 × 요율을 한 줄에 붙여 산식이 눈으로 검증되게 한다.
+   숫자가 세로로 정렬돼야 비교가 되므로 tabular-nums. */
+.why .rate-rows {
+  margin: 6px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.why .rate-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.why .rate-row .rate-plan {
+  min-width: 30px;
+  font-weight: 800;
+  color: var(--text);
+}
+
 .why .cite a {
   color: var(--accent);
   text-decoration: underline;
