@@ -2,6 +2,7 @@
   "rule_id": "youth-future-savings-2026-07",
   "product_name": "청년미래적금",
   "product_type": "savings",
+  "applies_to": [],
   "status": "active",
   "version": "2026-07 기준",
   "verified_at": "2026-07-24",

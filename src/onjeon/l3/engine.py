@@ -14,6 +14,26 @@ def split_funding(amount_needed: int, user_assets: int) -> tuple[int, int]:
     return own, loan
 
 
+def split_funding_policy(
+    amount_needed: int, user_assets: int, policy_limit: int
+) -> tuple[int, int, int]:
+    """필요 자금을 (자기자본, 정책대출, 시장대출) 으로 분할한다.
+
+    정책대출은 상품 한도(policy_limit)까지만 받을 수 있고 초과분은 시장금리 대출이다.
+    한도를 무시하고 정책금리를 대출 전액에 적용하면 전세 비용이 실제보다 싸게 나온다
+    (보증금 2억·자산 2천만·한도 1억 기준 연 184만원 과소평가 — 결론 부호가 뒤집힌다).
+
+        amount_needed ─┬─ own    = min(필요액, 자산)          → 기회비용
+                       ├─ policy = min(잔여, policy_limit)    → 정책금리
+                       └─ market = 잔여 − policy              → 시장금리
+
+    policy_limit=0 이면 (own, 0, loan) — split_funding과 같은 결과.
+    """
+    own, loan = split_funding(amount_needed, user_assets)
+    policy = min(loan, max(policy_limit, 0))
+    return own, policy, loan - policy
+
+
 def annual_cost_jeonse(
     *,
     deposit: int,
@@ -79,6 +99,21 @@ def annual_cost_buy(
     )
 
 
+def auction_rate(region: str, building_type: str, auction_rates: dict) -> float:
+    """지역·건물유형 → 낙찰가율. 지역표 우선, 없으면 default, 그것도 없으면 최저값.
+
+    테이블에 없는 유형에 낙찰가율을 높게 잡으면 회수 예상액이 부풀려져 LGD가
+    과소평가된다 — 그래서 미지 유형은 가장 보수적(최저)으로 떨어뜨린다.
+    """
+    rates = auction_rates["rates"]
+    region_table = rates.get(region, rates["default"])
+    if building_type in region_table:
+        return region_table[building_type]
+    if building_type in rates["default"]:
+        return rates["default"][building_type]
+    return min(rates["default"].values())
+
+
 def lgd(
     *,
     market_price: int,
@@ -86,8 +121,21 @@ def lgd(
     senior_claims: int,
     deposit: int,
     insured: bool = False,
+    priority_krw: int = 0,
 ) -> float:
     """LGD = 1 − (경매 회수 예상액 / 보증금), [0, 1] 클램프.
+
+    배당 순서:
+        낙찰가 = 시세 × 낙찰가율
+        ① priority_krw  — 소액임차인 최우선변제. 선순위 근저당보다 **먼저** 배당된다
+                          (주택임대차보호법 §8). 0이면 없는 것과 같다.
+        ② senior_claims — 선순위 근저당 등
+        ③ 남은 금액이 대상 임차인의 배당
+        회수액은 보증금을 넘지 않는다(초과 배당은 임차인 몫이 아니다).
+
+    최우선변제를 빼면 소액 보증금(주로 월세)의 위험이 과대평가된다 — 낙찰가를
+    선순위가 거의 다 먹는 상황에서 실제로는 전액 보호되는데 LGD가 1.0으로 나온다.
+    한도·기준액은 룰 데이터이며 `l3.risk.priority_amount`가 계산한다.
 
     보증보험 가입 매물은 0.0 (MVP 가정 — [확인] 부분 보전 조건 반영 필요).
     """
@@ -96,8 +144,9 @@ def lgd(
     if insured:
         return 0.0
     expected_auction = market_price * auction_rate
-    recovery = max(expected_auction - senior_claims, 0.0)
-    recovery = min(recovery, deposit)
+    priority = min(max(priority_krw, 0), deposit, expected_auction)
+    remainder = max(expected_auction - priority - senior_claims, 0.0)
+    recovery = min(priority + remainder, deposit)
     return 1.0 - recovery / deposit
 
 

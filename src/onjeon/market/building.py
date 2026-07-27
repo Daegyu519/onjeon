@@ -20,3 +20,13 @@ def building_type_for_use(use: str) -> str:
         if needle in use:
             return btype
     raise ValueError(f"실거래가 유형 미분류 건물용도: {use!r}")
+
+
+# 실거래가 유형 코드 → 낙찰가율 룰 표의 유형(한글). 단독·다가구(sh)는 표에 없어
+# '기타'로 보내고, engine.auction_rate가 거기서 가장 보수적인 값으로 떨어뜨린다.
+_AUCTION_TYPE = {"apt": "아파트", "rh": "빌라", "offi": "오피스텔", "sh": "기타"}
+
+
+def auction_type(code_or_name: str) -> str:
+    """유형 코드(apt/rh/offi/sh) → 낙찰가율 표 유형(한글). 이미 한글이면 그대로 통과."""
+    return _AUCTION_TYPE.get(code_or_name, code_or_name)

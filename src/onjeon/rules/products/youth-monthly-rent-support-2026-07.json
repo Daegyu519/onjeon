@@ -2,6 +2,7 @@
   "rule_id": "youth-monthly-rent-support-2026-07",
   "product_name": "청년월세 특별지원",
   "product_type": "subsidy",
+  "applies_to": ["wolse"],
   "status": "active",
   "version": "2026-07 기준",
   "verified_at": "2026-07-24",
@@ -29,8 +30,10 @@
   ],
   "terms": {
     "interest_rate": null,
+    "monthly_support_krw": 200000,
+    "support_months": 24,
     "limit_krw": 4800000,
-    "note": "지원(대출 아님): 월 최대 20만원 × 최대 24개월(총 480만). 소득·재산 요건 별도 [확인]. 월세 매물 대상."
+    "note": "지원(대출 아님): 월 최대 20만원 × 최대 24개월(총 480만). 한시 지원이라 거주기간이 24개월보다 길면 연평균으로 환산해야 한다(매년 반복 차감하면 과대 계상). 소득·재산 요건 별도 [확인]. 월세 매물 대상."
   },
   "alternatives": []
 }

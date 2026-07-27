@@ -42,6 +42,9 @@ button {
   max-width: 900px;
   margin: 0 auto;
   padding: 28px 20px 80px;
+  /* 한글은 어절 단위로 끊어야 읽힌다. 기본값은 '채권최고/액'처럼 단어 중간을 자른다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* ── 헤더 ── */
@@ -279,6 +282,16 @@ button {
     width: 100%;
     justify-content: space-between;
   }
+  /* 금액 입력은 자리수가 길어(200,000,000) 2열에선 숫자가 잘린다 — 1열로 편다 */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .answer-h {
+    font-size: 19px;
+  }
+  .answer-h b {
+    font-size: 26px;
+  }
 }
 
 /* ── 등기부 인식 확인 게이트 ── */
@@ -330,11 +343,21 @@ button {
 /* ── 탭 ── */
 .tabs {
   display: inline-flex;
+  align-items: center;
   background: #eaedf0;
   border-radius: 12px;
   padding: 3px;
   gap: 2px;
   margin-top: 14px;
+}
+/* '전세 vs 월세'가 답이고 뒤 두 탭은 그 근거다 — 라벨로 위계를 드러낸다 */
+.tabs .tab-sep {
+  padding: 0 8px 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-3);
+  border-left: 1px solid #d5dae0;
+  margin-left: 4px;
 }
 .tabs button {
   border: 0;
@@ -387,6 +410,9 @@ button {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--text-2);
+  /* min-width:0 없으면 input의 내재 최소폭이 1fr 컬럼을 밀어내 가로 스크롤이 생긴다
+     (375px에서 실측 scrollWidth 454px). 그리드/플렉스 오버플로의 표준 원인. */
+  min-width: 0;
 }
 .form-grid label span {
   color: var(--text-3);
@@ -449,72 +475,335 @@ button {
   font-weight: 600;
 }
 
-/* ── 적정 주거비 게이지 ── */
-.gauge-card .verdict {
-  display: inline-block;
+/* ── 적정 주거비(RIR) — 게이지 카드에서 한 줄 배지로 격하.
+      "얼마나 싼가"의 답이 아니라 보조 판단이라 헤드라인 아래에 눕힌다. ── */
+.rir {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.rir b {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.rir.ok b,
+.rir.ok span {
+  color: var(--mae);
+}
+.rir.over b,
+.rir.over span {
+  color: var(--up);
+}
+.rir span {
+  font-weight: 800;
+}
+
+/* ── 입력 그룹 — "비교할 두 집" / "내 조건"으로 나눠 스캔 비용을 낮춘다 ── */
+.input-group + .input-group {
+  margin-top: 18px;
+}
+.group-title {
   font-size: 13px;
   font-weight: 800;
-  padding: 5px 12px;
-  border-radius: 999px;
-}
-.verdict.ok {
-  color: var(--mae);
-  background: rgba(0, 168, 77, 0.1);
-}
-.verdict.over {
-  color: var(--up);
-  background: rgba(240, 68, 82, 0.1);
-}
-.gauge-num {
-  margin: 12px 0 10px;
-  font-size: 14px;
   color: var(--text-2);
-  font-weight: 600;
+  margin-bottom: 8px;
 }
-.gauge-num b {
-  color: var(--text);
-  font-size: 18px;
+
+/* ── 답: 헤드라인 한 문장 ── */
+.answer-sub {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.answer-h {
+  margin: 6px 0 0;
+  font-size: 22px;
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: -0.02em;
+}
+.answer-h b {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
 }
-.gauge-num .ok {
-  color: var(--mae);
-  font-weight: 700;
+.answer-h b.cheap {
+  color: var(--jun);
 }
-.gauge-num .over {
+.answer-h b.dear {
   color: var(--up);
-  font-weight: 700;
 }
-.gauge {
-  position: relative;
-  height: 12px;
+.risk-off {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #8a5a00;
+  background: rgba(255, 179, 0, 0.12);
+  border: 1px solid rgba(255, 179, 0, 0.35);
+}
+
+/* ── 시그니처: 항목별 누적 바 + 혜택 절감 오버레이.
+      두 바는 같은 눈금이라 길이 자체가 비교다. 혜택은 지불 구간 오른쪽 끝에서
+      되돌아오는 사선으로 그려 "여기까지 깎였다"를 보여준다. ── */
+.bars {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+.bar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.bar-label {
+  font-size: 14px;
+  font-weight: 800;
+}
+.bar-amount {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.bar-win {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mae);
+  background: rgba(0, 168, 77, 0.1);
+  padding: 2px 7px;
   border-radius: 999px;
+}
+.bar-track {
+  position: relative;
+  height: 22px;
+  border-radius: 6px;
   background: #eef1f4;
   overflow: hidden;
 }
-.gauge-fill {
+.bar-stack {
+  display: flex;
   height: 100%;
-  border-radius: 999px;
+  transition: width 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.gauge-fill.ok {
-  background: var(--mae);
+.bar-seg {
+  height: 100%;
 }
-.gauge-fill.over {
-  background: var(--up);
+.bar-seg.risk {
+  /* 유일하게 '지불'이 아니라 '위험'인 항목 — 사선으로 질감까지 다르게 둔다 */
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.32) 0 3px,
+    transparent 3px 6px
+  );
 }
-.gauge-cap {
+.bar-credit {
   position: absolute;
-  left: 66.6%;
-  top: -3px;
-  width: 2px;
-  height: 18px;
-  background: var(--text-3);
-  z-index: 2;
+  top: 0;
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(25, 31, 40, 0.16) 0 4px,
+    rgba(255, 255, 255, 0.5) 4px 8px
+  );
+  border-left: 2px solid var(--text);
 }
-.gauge-legend {
-  margin-top: 8px;
+.bar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.bar-legend .sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+.bar-legend .sw.hatch {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(25, 31, 40, 0.35) 0 3px,
+    #fff 3px 6px
+  );
+  border: 1px solid var(--border);
+}
+
+/* ── 항목별 표 — 색에만 의존하지 않는 텍스트 채널(WCAG: 색 단독 전달 금지) ── */
+.bt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.bt th,
+.bt td {
+  padding: 9px 4px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+.bt th:first-child,
+.bt td:first-child {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.bt th {
   font-size: 12px;
   color: var(--text-3);
+  font-weight: 700;
+}
+.bt td {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.bt td.minus {
+  color: var(--mae);
+}
+.bt tr.risk td:first-child {
+  color: var(--up);
+}
+.bt tr.risk td {
+  color: var(--up);
+}
+.bt tr.sum td {
+  border-bottom: none;
+  border-top: 2px solid var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* ── 근거 목록 ── */
+.why {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+.why li {
+  padding-left: 12px;
+  position: relative;
   font-weight: 600;
+}
+.why li::before {
+  content: '·';
+  position: absolute;
+  left: 2px;
+  color: var(--text-3);
+}
+.why b {
+  color: var(--text);
+}
+.why .over {
+  color: var(--up);
+  font-weight: 700;
+}
+.why .ver {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+/* 시세 민감도 — 점추정 하나를 원 단위로 보여주면 실제보다 정밀해 보인다 */
+.why li.band {
+  margin-top: 6px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 8px;
+  background: rgba(240, 68, 82, 0.05);
+  border-left: 2px solid var(--up);
+  font-size: 12.5px;
+}
+.why li.band::before {
+  content: none;
+}
+.why li.band b {
+  color: var(--up);
+  font-variant-numeric: tabular-nums;
+}
+/* 선택 입력 그룹의 부제 */
+.group-title .opt {
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+/* 룰 출처 인용 — 조항·버전·원문 링크 */
+.why .cite {
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+.why .cite a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.why .cite-note {
+  margin-top: 2px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+/* ── 한계 — 각주가 아니라 결과 옆에. 원칙 5: 한계를 먼저 말한다 ── */
+.limits {
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #fbfcfd;
+  border: 1px solid var(--border);
+}
+.limits-h {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.limits ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.limits li {
+  position: relative;
+  padding-left: 13px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.limits li::before {
+  content: '·';
+  position: absolute;
+  left: 3px;
+  color: var(--text-3);
+}
+.limits b {
+  font-weight: 800;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-stack {
+    transition: none;
+  }
 }
 
 /* ── 금융지원 카드 ── */

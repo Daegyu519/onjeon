@@ -79,3 +79,43 @@ class TestEvaluate:
         assert result["eligible"] is False
         fields = [f["field"] for f in result["failed"]]
         assert "annual_income_krw" in fields
+
+
+class TestRecommendCarriesRuleMetadata:
+    """recommend()가 룰 메타데이터를 빠뜨리면 호출측에서 조용히 빈값이 된다.
+
+    실제로 두 번 당했다: applies_to 누락 → 용도 필터가 빈 목록을 받아 정책 혜택이
+    사라지고 전 구간 시장금리로 계산됨. source 누락 → 화면 인용의 조항이 빔.
+    둘 다 예외가 아니라 '그럴듯한 오답'으로 나타나서 눈에 안 띄었다.
+    """
+
+    def test_carries_every_field_decision_layer_reads(self):
+        from onjeon.l3.recommend import recommend
+        from onjeon.rules_io import load_products
+
+        products = load_products()
+        user = {
+            "age": 27, "assets_krw": 20_000_000, "is_homeless": True,
+            "is_household_head": True, "works_at_sme": True,
+            "annual_income_krw": 33_600_000, "deposit_krw": 100_000_000,
+        }
+        out = recommend(user, products)
+        assert out["eligible"], "이 프로필이면 자격 상품이 하나는 나와야 한다"
+        for entry in out["eligible"] + out["ineligible"]:
+            for field in ("terms", "product_type", "applies_to", "source"):
+                assert field in entry, f"{entry['rule_id']}에 {field} 누락"
+
+    def test_source_has_clause_refs_for_citation(self):
+        """모든 출력에 원문 출처 (CLAUDE.md 원칙 2) — 조항이 비면 인용이 껍데기다."""
+        from onjeon.l3.recommend import recommend
+        from onjeon.rules_io import load_products
+
+        out = recommend(
+            {"age": 27, "assets_krw": 20_000_000, "is_homeless": True,
+             "is_household_head": True, "works_at_sme": True,
+             "annual_income_krw": 33_600_000, "deposit_krw": 100_000_000},
+            load_products(),
+        )
+        for entry in out["eligible"]:
+            assert entry["source"].get("clause_refs"), f"{entry['rule_id']} 조항 없음"
+            assert entry["source"].get("url"), f"{entry['rule_id']} 원문 링크 없음"

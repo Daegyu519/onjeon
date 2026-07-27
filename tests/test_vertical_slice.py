@@ -62,11 +62,20 @@ class TestVerticalSlice:
         assert report["jeonse"]["e_loss"] > 0
 
     def test_lgd_matches_hand_calculation(self, persona, villa, officetel, model):
-        # 1.5억×0.74(서울 빌라 2026 상반기 실측) − 선순위 0.72억 → 회수 0.39억 → LGD 0.675
+        """소액임차인 최우선변제를 반영한 손계산.
+
+        낙찰가 = 1.5억 × 0.74(서울 빌라 2026 상반기 실측) = 1.11억
+        보증금 1.2억 ≤ 소액임차인 기준 1.65억 → 최우선변제 5,500만원이 선순위보다 먼저
+        잔여 배당 = max(1.11억 − 5,500만 − 선순위 7,200만, 0) = 0
+        회수액 = 5,500만 → LGD = 1 − 5,500/12,000 = 0.5417
+
+        최우선변제 반영 전에는 회수 0.39억 → LGD 0.675였다. 법정 보호를 빼면
+        전세 위험이 과대평가된다(주택임대차보호법 §8).
+        """
         report = run_comparison(
             persona=persona, villa_doc=villa, officetel_doc=officetel, model=model
         )
-        assert report["jeonse"]["lgd"] == pytest.approx(0.675)
+        assert report["jeonse"]["lgd"] == pytest.approx(1 - 55_000_000 / 120_000_000)
 
     def test_every_number_has_citations(self, persona, villa, officetel, model):
         report = run_comparison(

@@ -10,6 +10,12 @@ from __future__ import annotations
 from onjeon.l3.eligibility import evaluate
 
 
+# 판정 결과에 함께 실어보낼 룰 필드 → 없을 때의 기본값.
+# terms: 금리·한도·지원금 / product_type: loan|subsidy|savings
+# applies_to: jeonse|wolse|buy 용도 / source: 인용할 조항·원문 링크
+_CARRIED = {"terms": {}, "product_type": "loan", "applies_to": [], "source": {}}
+
+
 def _rank_key(result: dict):
     terms = result["terms"]
     rate = terms.get("interest_rate")
@@ -23,8 +29,14 @@ def recommend(profile: dict, products: list[dict]) -> dict:
         if product.get("status") == "discontinued":
             continue  # 종료 상품은 추천하지 않는다(staleness 방어)
         result = evaluate(profile, product)
-        result["terms"] = product.get("terms", {})
-        result["product_type"] = product.get("product_type", "loan")
+        # 룰의 메타데이터를 결과에 실어보낸다. 여기 빠진 필드는 호출측에서 조용히
+        # None/빈값이 되고, 예외가 아니라 "혜택이 사라지거나 인용이 비는" 형태로
+        # 나타나서 눈에 안 띈다(applies_to·source 둘 다 실제로 이렇게 빠뜨렸다).
+        # 룰에 호출측이 읽을 필드를 추가하면 여기와 tests/test_eligibility.py의
+        # TestRecommendCarriesRuleMetadata.test_carries_every_field_decision_layer_reads
+        # 를 같이 갱신한다.
+        for key in _CARRIED:
+            result[key] = product.get(key, _CARRIED[key])
         (ranked if result["eligible"] else rejected).append(result)
     ranked.sort(key=_rank_key)
     return {"eligible": ranked, "ineligible": rejected}

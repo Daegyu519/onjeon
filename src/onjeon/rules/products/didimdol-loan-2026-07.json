@@ -2,6 +2,7 @@
   "rule_id": "didimdol-loan-2026-07",
   "product_name": "내집마련 디딤돌대출",
   "product_type": "loan",
+  "applies_to": ["buy"],
   "status": "active",
   "version": "2026-07 기준",
   "verified_at": "2026-07-24",
