@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { parseWon, formatWon, glossKR } from './money'
+import { parseWon, formatWon, glossKR, errorText } from './money'
 
 const SEOUL_GU = [
   '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구',
@@ -149,6 +149,8 @@ export default function Decision() {
   const [f, setF] = useState({
     income: 2800000, assets: 20000000, age: 27, region: '관악구', stay: 4,
     homeless: true, head: true, sme: true,
+    // 가구 형태·신용. 기본값은 전부 '해당 없음'이라 안 건드리면 지금까지와 같은 결과가 나온다.
+    married: false, marriageYears: null, children: 0, youngestAge: null, delinquent: false,
     jz: 200000000, wsDep: 20000000, wsRent: 550000, maint: 70000, market: null,
     senior: null, btype: '', area: null, insured: false,
   })
@@ -176,6 +178,13 @@ export default function Decision() {
         is_homeless: f.homeless,
         is_household_head: f.head,
         works_at_sme: f.sme,
+        is_married: f.married,
+        // 빈 칸은 0이 아니라 null로 보낸다 — "혼인 0년"과 "안 적었다"는 다르다.
+        // 서버는 null이면 신혼 판정을 하지 않는다(모르는 걸 아니라고 단정하지 않는다).
+        marriage_years: f.marriageYears === null || f.marriageYears === '' ? null : Number(f.marriageYears),
+        children_count: Number(f.children) || 0,
+        youngest_child_age: f.youngestAge === null || f.youngestAge === '' ? null : Number(f.youngestAge),
+        has_credit_delinquency: f.delinquent,
       },
       listing: {
         // 적정주거비(RIR)는 월세안 기준으로 진단한다 — 화면에도 그렇게 표기한다
@@ -206,7 +215,7 @@ export default function Decision() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       const j = await r.json()
-      if (!r.ok) throw new Error(j.detail || `오류 ${r.status}`)
+      if (!r.ok) throw new Error(errorText(j.detail, r.status))
       setRes(j)
     } catch (e) {
       setError(e.message)
@@ -224,7 +233,7 @@ export default function Decision() {
     try {
       const r = await fetch('/api/register/parse', { method: 'POST', body: fd })
       const b = await r.json()
-      if (!r.ok) throw new Error(b.detail || '등기부를 읽지 못했습니다')
+      if (!r.ok) throw new Error(errorText(b.detail, r.status) || '등기부를 읽지 못했습니다')
       setProp(b)
       // 자동채움은 편의일 뿐이라 값은 전부 입력칸에 들어가 사용자가 확인·수정한다.
       // senior_claims_krw는 0(근저당 없음)과 null(못 읽음)이 다르므로 null만 거른다.
@@ -365,10 +374,30 @@ export default function Decision() {
               </select>
             </label>
             <MoneyField label="예상 매매가" hint="원·선택" value={f.market} onChange={setMoney('market')} placeholder="매수 비교용" />
+            {/* 자녀 수는 미혼도 해당될 수 있어(한부모) 항상 보인다. 혼인기간·막내 나이는
+                해당될 때만 펼친다 — 대부분의 사용자에게 빈 칸 5개를 보여줄 이유가 없다. */}
+            <label>자녀 수 <span>미성년</span>
+              <input type="number" min="0" max="10" value={f.children} onChange={set('children')} />
+            </label>
+            {Number(f.children) > 0 && (
+              <label>막내 나이 <span>만</span>
+                <input type="number" min="0" max="19" value={f.youngestAge ?? ''} onChange={set('youngestAge')} />
+                <span className="gloss">2살 미만이면 신생아 특례 대상이에요</span>
+              </label>
+            )}
+            {f.married && (
+              <label>혼인기간 <span>년</span>
+                <input type="number" min="0" max="60" value={f.marriageYears ?? ''} onChange={set('marriageYears')} />
+                <span className="gloss">7년 이내면 신혼가구 상품을 받을 수 있어요</span>
+              </label>
+            )}
             <div className="checks">
               <label className="chk"><input type="checkbox" checked={f.homeless} onChange={set('homeless')} />무주택</label>
               <label className="chk"><input type="checkbox" checked={f.head} onChange={set('head')} />세대주</label>
               <label className="chk"><input type="checkbox" checked={f.sme} onChange={set('sme')} />중소기업 재직</label>
+              <label className="chk"><input type="checkbox" checked={f.married} onChange={set('married')} />기혼</label>
+              {/* 기금 대출은 신용'점수'가 아니라 연체·대위변제 등 등록정보 유무로 거른다 */}
+              <label className="chk"><input type="checkbox" checked={f.delinquent} onChange={set('delinquent')} />연체 이력 있음</label>
             </div>
           </div>
         </div>
@@ -587,13 +616,19 @@ export default function Decision() {
         </section>
       )}
 
-      {a && (
+      {a && (a.available === false ? (
+        // 소득 0 → RIR은 분모가 없어 산출 불가. 0%나 빈칸을 보여주면 "부담이 없다"로
+        // 읽히므로, 못 낸다는 사실과 그래도 알 수 있는 주거비를 같이 말한다.
+        <div className="rir">
+          {a.reason} 월 주거비 <b>{won(a.monthly_cost)}원</b>
+        </div>
+      ) : (
         <div className={`rir ${a.over_under_krw > 0 ? 'over' : 'ok'}`}>
           월세 기준 주거비 부담(RIR) <b>{(a.rir_actual * 100).toFixed(0)}%</b>
           · 적정선 {(a.rir_cap * 100).toFixed(0)}%
           <span> — {a.verdict}</span>
         </div>
-      )}
+      ))}
 
       {res?.comparison && (
         <section className="hero comp-card">

@@ -25,7 +25,15 @@ from onjeon.rules_io import load_products, load_rules
 
 
 def _eligibility_input(profile: dict, listing: dict) -> dict:
-    """프로필+매물 → 자격판정 입력. 소득은 연소득(월×12), 보증금은 매물에서."""
+    """프로필+매물 → 자격판정 입력. 소득은 연소득(월×12), 보증금은 매물에서.
+
+    가구 형태(혼인·자녀)는 여기서 **판정 가능한 형태로 파생**시킨다. 룰 엔진은
+    단순 field-op-value 비교만 하므로, "혼인 7년 이내"·"막내가 2살 미만" 같은
+    조건은 불리언으로 미리 계산해서 넘긴다.
+    """
+    children = profile.get("children_count") or 0
+    youngest = profile.get("youngest_child_age")
+    marriage_years = profile.get("marriage_years")
     return {
         "age": profile.get("age"),
         "assets_krw": profile.get("assets_krw"),
@@ -34,6 +42,18 @@ def _eligibility_input(profile: dict, listing: dict) -> dict:
         "works_at_sme": profile.get("works_at_sme"),
         "annual_income_krw": profile["monthly_income_krw"] * 12,
         "deposit_krw": listing.get("deposit_krw", 0),
+        # 신혼가구 = 혼인 7년 이내(3개월 내 결혼 예정자 포함은 미수집이라 제외).
+        # 혼인기간을 안 넣었으면 기혼이어도 신혼 판정을 못 한다 — None이 아니라
+        # False로 두면 "신혼이 아니다"라고 단정하게 되므로 입력값이 있을 때만 True.
+        "is_newlywed": bool(profile.get("is_married")) and marriage_years is not None
+                       and marriage_years <= 7,
+        "is_married": bool(profile.get("is_married")),
+        "children_count": children,
+        # 신생아 특례 = 출산 후 2년 이내. 막내 나이(만)가 0~1이면 해당.
+        "has_newborn": youngest is not None and youngest <= 1 and children > 0,
+        # 기금 대출은 신용'점수' 커트라인이 아니라 신용도판단정보(연체·대위변제·부도)
+        # 등록 여부로 거른다. 그래서 점수가 아니라 불리언이다.
+        "no_credit_delinquency": not profile.get("has_credit_delinquency", False),
     }
 
 
@@ -342,9 +362,16 @@ def decide(
     profile: dict, listing: dict, *, products=None, market_params=None, tax_rules=None,
     auction_rates=None, risk_model=None,
 ) -> dict:
-    """프로필+매물 → {affordability, recommendations, comparison?, sources}. 월소득 없으면 ValueError."""
-    if not profile.get("monthly_income_krw"):
-        raise ValueError("monthly_income_krw(월소득)이 필요합니다")
+    """프로필+매물 → {affordability, recommendations, comparison?, sources}.
+
+    **월소득 0을 거절하지 않는다.** 무소득 청년(학생·구직자·프리랜서 준비기)은 이
+    서비스가 답해야 할 대상이다. 청년전용 버팀목전세자금대출은 소득 상한만 있고
+    하한이 없어 무소득도 신청 대상이다 — 소득 때문에 못 받는 상품이 있으면 그건
+    에러가 아니라 recommend()의 미자격 반증으로 나와야 한다.
+    RIR만 분모가 소득이라 산출이 불가능한데, 그건 affordability.available=False로 말한다.
+    """
+    if profile.get("monthly_income_krw", 0) < 0:
+        raise ValueError("monthly_income_krw(월소득)이 음수입니다")
     market_params = market_params or load_rules("market_params")
     tax_rules = tax_rules or load_rules("tax_rules")
     products = products if products is not None else load_products()

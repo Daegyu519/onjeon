@@ -100,6 +100,10 @@ class TestEligibilityVerticalSlice:
             "is_homeless": persona["is_homeless"],
             "is_household_head": persona["is_household_head"],
             "works_at_sme": persona["works_at_sme"],
+            # 기금 대출 제한 요건. evaluate()는 없는 필드를 미충족으로 보므로(누락을
+            # 조용히 통과시키면 자격이 부풀려진다) 여기서도 명시해야 한다.
+            # 배포 경로는 decision._eligibility_input이 항상 채운다.
+            "no_credit_delinquency": True,
         }
         by_id = {p["rule_id"]: evaluate(user, p) for p in load_products()}
 

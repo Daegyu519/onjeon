@@ -62,9 +62,20 @@ class TestSchemaValidation:
         assert r.status_code == 422
         assert "senior_claim_krw" in r.text
 
-    def test_zero_income_rejected_not_500(self):
+    def test_zero_income_accepted_not_rejected(self):
+        """무소득은 유효한 입력이다 — 거절이 아니라 결과로 답한다.
+
+        예전엔 `Field(gt=0)`로 422를 냈는데, 청년전용 버팀목전세자금대출은 소득
+        **상한**만 있고 하한이 없어 무소득도 신청 대상이다. 소득 때문에 못 받는
+        상품이 있으면 그건 미자격 반증으로 나와야 한다(tests/test_zero_income.py).
+        """
         with TestClient(app) as c:
             r = c.post("/api/decision", json={"profile": {"monthly_income_krw": 0}, "listing": {}})
+        assert r.status_code == 200
+
+    def test_negative_income_rejected(self):
+        with TestClient(app) as c:
+            r = c.post("/api/decision", json={"profile": {"monthly_income_krw": -1}, "listing": {}})
         assert r.status_code == 422
 
     def test_negative_deposit_rejected(self):

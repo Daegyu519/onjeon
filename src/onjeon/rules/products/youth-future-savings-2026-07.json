@@ -6,26 +6,78 @@
   "status": "active",
   "version": "2026-07 기준",
   "verified_at": "2026-07-24",
-  "verify_note": "2026-07-24 웹검증(금융위 fsc.go.kr/no010101/87106, HIGH): 청년도약계좌(2025-12 신규가입 종료)의 후속 자산형성 상품, 2026-06-22 출시. 만19~34세(병역 최대 6년 미산입 [확인]), 개인소득 총급여 7,500만 이하(일반형 6,000만/우대형 3,600만), 가구소득 중위 200% 이하(우대형 150%) [확인:중위원값]. 만기 3년, 월 납입 50만, 정부기여금 납입액 6%(우대 12%), 이자 비과세. 대출이 아닌 주거자금 마련 보조.",
+  "verify_note": "2026-07-24 웹검증(금융위 fsc.go.kr/no010101/87106, HIGH): 청년도약계좌(2025-12 신규가입 종료)의 후속 자산형성 상품, 2026-06-22 출시. 만19~34세(병역 최대 6년 미산입 [확인]), 개인소득 총급여 7,500만 이하(일반형 6,000만/우대형 3,600만), 가구소득 중위 200% 이하(우대형 150%) [확인:중위원값]. 만기 3년, 월 납입 50만, 정부기여금 납입액 6%(우대 12%), 이자 비과세. 대출이 아닌 주거자금 마련 보조. / 2026-07-27 추가 검증: 소득 하한. 상한(총급여 7,500만)만 걸어두면 무소득자가 자격 통과하는데, 실제로는 소득금액 증명이 불가능해 가입 대상이 아니다. 하한값 1원은 '증명 가능한 소득의 존재'를 뜻하는 대리 조건 [확인: 가구소득 중위 180% 요건은 가구원 데이터 미수집이라 판정에서 제외]",
   "source": {
     "url": "https://www.fsc.go.kr/no010101/87106",
-    "clause_refs": ["가입요건", "지원내용"]
+    "clause_refs": [
+      "가입요건",
+      "지원내용"
+    ]
   },
   "criteria": [
     {
-      "field": "age", "op": ">=", "value": 19,
+      "field": "age",
+      "op": ">=",
+      "value": 19,
       "clause": "가입요건 — 만 19세 이상",
-      "boundary_tests": [{"input": 19, "expect": true}, {"input": 18, "expect": false}]
+      "boundary_tests": [
+        {
+          "input": 19,
+          "expect": true
+        },
+        {
+          "input": 18,
+          "expect": false
+        }
+      ]
     },
     {
-      "field": "age", "op": "<=", "value": 34,
+      "field": "age",
+      "op": "<=",
+      "value": 34,
       "clause": "가입요건 — 만 34세 이하(병역 미산입 [확인])",
-      "boundary_tests": [{"input": 34, "expect": true}, {"input": 35, "expect": false}]
+      "boundary_tests": [
+        {
+          "input": 34,
+          "expect": true
+        },
+        {
+          "input": 35,
+          "expect": false
+        }
+      ]
     },
     {
-      "field": "annual_income_krw", "op": "<=", "value": 75000000,
+      "field": "annual_income_krw",
+      "op": "<=",
+      "value": 75000000,
       "clause": "가입요건 — 개인 총급여 7,500만 이하(최고구간)",
-      "boundary_tests": [{"input": 75000000, "expect": true}, {"input": 75000001, "expect": false}]
+      "boundary_tests": [
+        {
+          "input": 75000000,
+          "expect": true
+        },
+        {
+          "input": 75000001,
+          "expect": false
+        }
+      ]
+    },
+    {
+      "field": "annual_income_krw",
+      "op": ">=",
+      "value": 1,
+      "clause": "가입요건 — 소득이 없거나 국세청 소득금액 증명이 불가능하면 가입할 수 없음(금융위 QA). 비과세 소득만 있는 경우도 제외",
+      "boundary_tests": [
+        {
+          "input": 0,
+          "expect": false
+        },
+        {
+          "input": 1,
+          "expect": true
+        }
+      ]
     }
   ],
   "terms": {

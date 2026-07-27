@@ -1,7 +1,9 @@
 {
   "rule_id": "youth-jeonse-loan-2026-07",
   "product_name": "청년전용 버팀목전세자금대출",
-  "applies_to": ["jeonse"],
+  "applies_to": [
+    "jeonse"
+  ],
   "version": "2026-07 기준",
   "verified_at": "2026-07-18",
   "verify_note": "2026-07-18 웹 검증: 만 19~34세, 부부합산 연소득 5천만 이하, 순자산 3.37억 이하, 보증금 3억 이하(전용 85㎡ 이하), 한도 2억(보증금의 80% 이내). 전용면적 조건은 MVP 미수집 항목이라 판정에서 제외 — 리포트에 주석으로 표기",
@@ -104,6 +106,22 @@
         },
         {
           "input": 300000001,
+          "expect": false
+        }
+      ]
+    },
+    {
+      "field": "no_credit_delinquency",
+      "op": "==",
+      "value": true,
+      "clause": "대출제한 — 은행 연체대출금(연체·대지급·대위변제 포함) 보유자, 은행에 손실을 끼친 자, 신용도판단정보 등록자는 대출 불가. 신용'점수' 커트라인이 아니라 등록정보 유무로 판정한다 (2026-07-27 검증)",
+      "boundary_tests": [
+        {
+          "input": true,
+          "expect": true
+        },
+        {
+          "input": false,
           "expect": false
         }
       ]

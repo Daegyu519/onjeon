@@ -29,15 +29,38 @@ def diagnose(
     opportunity_rate: float,
     rir_cap: float,
 ) -> dict:
-    """실질 월주거비 vs 적정선. over_under_krw>0=초과, <0=여유. 소득 0 이하면 ValueError."""
-    if monthly_income <= 0:
-        raise ValueError("월소득이 0 이하 — RIR 산출 불가")
+    """실질 월주거비 vs 적정선. over_under_krw>0=초과, <0=여유.
+
+    **소득 0은 예외가 아니다.** RIR은 분모가 소득이라 산출 자체가 불가능하지만,
+    그건 이 진단 하나가 못 나오는 것이지 의사결정 전체가 실패할 일이 아니다
+    (전세vs월세 비교·기대손실·대출 자격은 소득 0에서도 그대로 계산된다).
+    예전엔 여기서 ValueError를 올려 무소득 청년이 화면 전체를 못 봤다.
+
+    소득 0이면 `available=False` + 사유를 남기고 월주거비는 그대로 알려준다 —
+    "얼마 쓰는지"는 소득과 무관하게 답할 수 있는 정보다.
+    """
+    if monthly_income < 0:
+        raise ValueError(f"월소득이 음수: {monthly_income!r}")
     cost = monthly_housing_cost(
         monthly_rent=monthly_rent, maintenance=maintenance,
         deposit=deposit, opportunity_rate=opportunity_rate,
     )
+    if monthly_income == 0:
+        return {
+            "available": False,
+            "reason": "월소득이 0이라 소득 대비 주거비 비율(RIR)을 낼 수 없어요. "
+                      "주거비 자체는 아래와 같고, 대출 자격은 소득과 별개로 판정했어요.",
+            "monthly_cost": cost,
+            "appropriate": None,
+            "over_under_krw": None,
+            "rir_actual": None,
+            "rir_cap": rir_cap,
+            "verdict": None,
+        }
     cap = appropriate_rent(monthly_income=monthly_income, rir_cap=rir_cap)
     return {
+        "available": True,
+        "reason": None,
         "monthly_cost": cost,
         "appropriate": cap,
         "over_under_krw": cost - cap,

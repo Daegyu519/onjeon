@@ -48,7 +48,15 @@ def annual_cost_jeonse(
 
 
 def wolse_tax_credit(annual_rent: int, annual_income: int, tax_rules: dict) -> int:
-    """월세 세액공제액 (조특법 §95-2 — 구간·한도는 룰 DB에서)."""
+    """월세 세액공제액 (조특법 §95-2 — 구간·한도는 룰 DB에서).
+
+    **소득이 없으면 0이다.** 세액공제는 산출세액에서 빼는 것이라 낼 세금이 없으면
+    돌려받을 것도 없다(환급형이 아니다). 구간표는 소득 상한만 보므로 그냥 매칭하면
+    소득 0이 최저구간에 걸려 공제가 붙는다 — 그러면 무소득자에게 월세가 실제보다
+    싸게 계산되어 전세·월세 비교의 결론이 월세 쪽으로 기운다.
+    """
+    if annual_income <= 0:
+        return 0
     credit_rule = tax_rules["wolse_tax_credit"]
     base = min(annual_rent, credit_rule["annual_rent_cap_krw"])
     # L0가 공급한 룰의 구간 순서를 신뢰하지 않는다 — 항상 소득 상한 오름차순으로 매칭

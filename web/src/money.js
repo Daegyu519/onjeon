@@ -51,6 +51,44 @@ export function formatWon(n) {
   return Math.round(n).toLocaleString('en-US')
 }
 
+// 서버 필드명 → 화면에 쓰는 말. 없는 건 필드명 그대로 보여준다(숨기는 것보다 낫다).
+const FIELD_LABEL = {
+  monthly_income_krw: '월소득',
+  assets_krw: '보유자산',
+  age: '나이',
+  expected_stay_years: '거주기간',
+  jeonse_deposit_krw: '전세 보증금',
+  wolse_deposit_krw: '월세 보증금',
+  wolse_monthly_rent_krw: '월세',
+  maintenance_krw: '관리비',
+  senior_claims_krw: '선순위 채권최고액',
+  exclusive_area_m2: '전용면적',
+  market_price_krw: '예상 매매가',
+}
+
+/**
+ * API 오류 응답 → 사람이 읽는 문장.
+ *
+ * FastAPI 검증 실패(422)의 detail은 **문자열이 아니라 객체 배열**이다:
+ *   [{loc:["body","profile","monthly_income_krw"], msg:"Input should be greater than 0"}]
+ * 이걸 그대로 `new Error(detail)`에 넘기면 String([{...}]) → "[object Object]"가 되어
+ * 서버가 정확히 짚어준 원인이 화면에서 통째로 사라진다. 실제로 그렇게 떴다.
+ */
+export function errorText(detail, status) {
+  if (typeof detail === 'string' && detail) return detail
+  if (Array.isArray(detail) && detail.length) {
+    return detail
+      .map((d) => {
+        const loc = Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : null
+        const label = loc ? FIELD_LABEL[loc] || loc : null
+        const msg = d?.msg || '값이 올바르지 않습니다'
+        return label ? `${label}: ${msg}` : msg
+      })
+      .join('\n')
+  }
+  return status ? `오류 ${status}` : '알 수 없는 오류'
+}
+
 /** 원(정수) → 한글 판독 "1억 2,300만원". null → "". */
 export function glossKR(n) {
   if (n == null || !Number.isFinite(n)) return ''

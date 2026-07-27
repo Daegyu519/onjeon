@@ -1,7 +1,10 @@
 {
   "rule_id": "sme-youth-jeonse-2026-07",
   "product_name": "중소기업취업청년 전월세보증금대출",
-  "applies_to": ["jeonse", "wolse"],
+  "applies_to": [
+    "jeonse",
+    "wolse"
+  ],
   "version": "2026-07 기준",
   "verified_at": "2026-07-18",
   "verify_note": "2026-07-18 웹 검증: 외벌이 연소득 3,500만 이하(부부합산 5,000만), 보증금 2억 이하(전용 85㎡), 한도 1억, 금리 1.2%, 만 34세(군복무 시 최대 39세). ⚠️ 일부 은행 '2025-01-01 판매중지' 표기 — 판매 지속 여부 [확인] 필요, 중소기업 재직 요건은 MVP 미수집 항목",
@@ -72,6 +75,22 @@
         },
         {
           "input": 200000001,
+          "expect": false
+        }
+      ]
+    },
+    {
+      "field": "no_credit_delinquency",
+      "op": "==",
+      "value": true,
+      "clause": "대출제한 — 은행 연체대출금(연체·대지급·대위변제 포함) 보유자, 은행에 손실을 끼친 자, 신용도판단정보 등록자는 대출 불가. 신용'점수' 커트라인이 아니라 등록정보 유무로 판정한다 (2026-07-27 검증)",
+      "boundary_tests": [
+        {
+          "input": true,
+          "expect": true
+        },
+        {
+          "input": false,
           "expect": false
         }
       ]

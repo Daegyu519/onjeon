@@ -123,7 +123,10 @@ def post_register_parse(file: UploadFile):
 class _Profile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    monthly_income_krw: int = Field(gt=0, description="월소득(원)")
+    # 0을 막지 않는다. 무소득 청년은 이 서비스가 도와야 할 대상이지 거절할 대상이 아니고,
+    # 실제로 청년전용 버팀목전세자금대출은 소득 **상한**만 있고 하한이 없다(무소득 신청 가능).
+    # 소득 때문에 못 받는 상품이 있으면 그건 422가 아니라 '미자격 반증'으로 답해야 한다.
+    monthly_income_krw: int = Field(ge=0, description="월소득(원). 0=무소득 — 거절이 아니라 결과로 답한다")
     assets_krw: int = Field(default=0, ge=0)
     age: int = Field(default=30, ge=0, le=120)
     region: str = "관악구"
@@ -131,6 +134,28 @@ class _Profile(BaseModel):
     is_homeless: bool = True
     is_household_head: bool = True
     works_at_sme: bool = False
+
+    # ── 가구 형태. 정책 상품의 우대·완화가 대부분 여기에 걸린다.
+    # 기본값은 전부 '해당 없음'이라 안 보내면 지금까지와 같은 결과가 나온다.
+    is_married: bool = False
+    # 혼인 경과 연수. 신혼가구 = 7년 이내. 기혼인데 이 값이 없으면 신혼 판정을
+    # 하지 않는다 — 모르는 것을 '아니다'로 단정하지 않기 위해서다.
+    marriage_years: int | None = Field(default=None, ge=0, le=80)
+    children_count: int = Field(default=0, ge=0, le=20, description="미성년 자녀 수")
+    # 막내 나이(만). 신생아 특례(출산 2년 이내) 판정에 쓴다.
+    youngest_child_age: int | None = Field(default=None, ge=0, le=30)
+
+    # 신용: 기금 대출은 신용'점수' 커트라인이 아니라 신용도판단정보(연체·대지급·
+    # 대위변제·부도) 등록 여부로 거른다. 그래서 점수가 아니라 불리언이다.
+    # 점수를 임계값으로 쓰면 근거 없는 숫자를 지어내는 것이 된다(CLAUDE.md 원칙 1·6).
+    has_credit_delinquency: bool = Field(
+        default=False, description="연체·대위변제 등 신용도판단정보 등록 여부. 기금 대출 제한 사유"
+    )
+    # 참고용 입력. **자격 판정에 쓰지 않는다** — 점수→금리/승인 기준표를 검증하지
+    # 못했기 때문이다. 화면 안내에만 쓰고, 검증된 표가 생기면 그때 계산에 넣는다.
+    credit_score: int | None = Field(
+        default=None, ge=0, le=1000, description="NICE/KCB 신용점수(참고용, 판정 미반영)"
+    )
 
 
 class _Listing(BaseModel):
