@@ -5,7 +5,7 @@
   "source": {
     "name": "한국주택금융공사_전세자금대출 고객 특성별 금리 정보",
     "url": "https://www.data.go.kr/data/15082044/openapi.do",
-    "endpoint": "http://apis.data.go.kr/B551408/rent-loan-rate-multi-dimensional-info/dimensional-list",
+    "endpoint": "https://apis.data.go.kr/B551408/rent-loan-rate-multi-dimensional-info/dimensional-list",
     "note": "HF 전세자금보증 담보 시중은행 대출의 실제 실행 금리. 은행 자체 홈페이지는 robots.txt가 크롤링을 금지하므로 공개 API만 쓴다."
   },
   "unit": "percent",
@@ -116,5 +116,57 @@
       "loan_amount": 138496053000
     }
   },
-  "overall_weighted_avg_pct": 3.676
+  "overall_weighted_avg_pct": 3.676,
+  "posted": {
+    "케이뱅크": {
+      "posted_pct": 3.95,
+      "week": "20260713~20260719",
+      "call_center": "1522-1000"
+    },
+    "카카오뱅크": {
+      "posted_pct": 3.71,
+      "week": "20260713~20260719",
+      "call_center": "1599-3333"
+    },
+    "토스뱅크": {
+      "posted_pct": 4.01,
+      "week": "20260713~20260719",
+      "call_center": "1661-7654"
+    },
+    "국민은행": {
+      "posted_pct": 3.96,
+      "week": "20260713~20260719",
+      "call_center": "1644-9999"
+    },
+    "기업은행": {
+      "posted_pct": 4.21,
+      "week": "20260713~20260719",
+      "call_center": "1566-2566"
+    },
+    "우리은행": {
+      "posted_pct": 4.17,
+      "week": "20260713~20260719",
+      "call_center": "1599-5000"
+    },
+    "농협은행": {
+      "posted_pct": 4.28,
+      "week": "20260713~20260719",
+      "call_center": "1588-2100"
+    },
+    "하나은행": {
+      "posted_pct": 4.22,
+      "week": "20260713~20260719",
+      "call_center": "1599-1111"
+    },
+    "신한은행": {
+      "posted_pct": 4.44,
+      "week": "20260713~20260719",
+      "call_center": "1599-8000"
+    },
+    "부산은행": {
+      "posted_pct": 4.31,
+      "week": "20260713~20260719",
+      "call_center": "1588-6200"
+    }
+  }
 }

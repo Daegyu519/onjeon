@@ -36,7 +36,16 @@ from pathlib import Path
 
 from onjeon.config import load_env
 
-ENDPOINT = "http://apis.data.go.kr/B551408/rent-loan-rate-multi-dimensional-info/dimensional-list"
+ENDPOINT = "https://apis.data.go.kr/B551408/rent-loan-rate-multi-dimensional-info/dimensional-list"
+# 주별 공시금리(15082033). 같은 HF지만 성격이 다르다 — 이쪽은 은행이 **공시**하는
+# 주간 평균금리고, 위(15082044)는 고객특성별 **실행** 금리다. 실측 차이가 크다:
+# 국민은행 공시 3.96% vs 실행 가중평균 3.49%(우대 적용 후). 계산에는 실행 금리를
+# 쓰고, 공시는 교차검증·최신성 확인용으로만 받는다.
+POSTED_ENDPOINT = "https://apis.data.go.kr/B551408/rent-loan-rate-info/rate-list"
+# 응답에 interest1_1~4_2 여덟 컬럼이 오지만 HF 공시표는 은행당 금리가 1개뿐이고
+# 실제로 interest4_1만 채워져 온다. 나머지 일곱 컬럼은 의미가 문서화돼 있지 않으므로
+# 쓰지 않는다 — 모르는 컬럼을 해석해서 쓰면 근거 없는 숫자가 된다.
+POSTED_RATE_FIELD = "interest4_1"
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "src" / "onjeon" / "rules"
 # loanYm은 YYYYMM 또는 L1M(최근1개월)·L3M·L1Y를 받는다. 기본은 최근 1개월.
@@ -138,6 +147,34 @@ def summarize(items: list[dict]) -> dict:
     return {"banks": dict(sorted(out.items())), "overall_weighted_avg_pct": overall}
 
 
+def fetch_posted(service_key: str, *, rows: int = 100) -> dict:
+    """주별 공시금리(15082033) → {은행명: {공시금리, 기준주, 고객센터}}.
+
+    교차검증용이다. 실행금리와 크게 벌어지면 둘 중 하나가 이상한 것이므로 알아야 한다.
+    '-'(취급실적 없음)는 0으로 오는데, 0%를 금리로 쓰면 그 은행이 공짜로 보인다 — 버린다.
+    """
+    params = {"serviceKey": service_key, "pageNo": 1, "numOfRows": rows, "dataType": "JSON"}
+    url = f"{POSTED_ENDPOINT}?{urllib.parse.urlencode(params)}"
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=TIMEOUT) as resp:
+            doc = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:  # 교차검증은 있으면 좋은 것이지 없다고 멈출 일이 아니다
+        print(f"⚠️  공시금리 조회 실패(교차검증 생략): {exc}", file=sys.stderr)
+        return {}
+    items = doc.get("response", doc).get("body", {}).get("items", [])
+    out = {}
+    for it in items if isinstance(items, list) else []:
+        rate = _num(it.get(POSTED_RATE_FIELD))
+        if not rate:  # 0 = 해당 기간 취급실적 없음('-')
+            continue
+        out[(it.get("organId") or "").strip()] = {
+            "posted_pct": rate,
+            "week": f"{it.get('bssYmdStart')}~{it.get('bssYmdEnd')}",
+            "call_center": it.get("callCenter"),
+        }
+    return out
+
+
 def _num(v):
     try:
         return float(str(v).replace(",", "").strip())
@@ -183,6 +220,17 @@ def main() -> int:
     kb = next((v for k, v in banks.items() if "국민" in k or "KB" in k.upper()), None)
     if kb:
         print(f"   → KB국민은행 가중평균 {kb['weighted_avg_pct']}%")
+
+    # 교차검증: 공시금리(주별)와 실행금리(월별)를 나란히 본다.
+    posted = fetch_posted(key)
+    if posted:
+        week = next(iter(posted.values()))["week"]
+        print(f"\n📋 공시금리 대조 (기준주 {week}) — 공시는 우대 적용 전이라 실행보다 높은 것이 정상")
+        for name in sorted(set(banks) & set(posted)):
+            ex, po = banks[name]["weighted_avg_pct"], posted[name]["posted_pct"]
+            flag = "  ⚠️ 실행>공시" if ex and po and ex > po + 0.5 else ""
+            print(f"   {name:12} 공시 {po:>5}%  실행 {ex:>6}%  차 {po - ex:>6.2f}%p{flag}")
+        summary["posted"] = posted
 
     if args.dry_run:
         print("\n(dry-run — 저장하지 않았습니다)")
