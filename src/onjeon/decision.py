@@ -208,11 +208,9 @@ def _risk(
     # 낙찰가율은 **매물이 있는 지역**의 통계다. profile.region은 사용자의 희망지역이라
     # 매물 소재지와 다를 수 있다(등기부 없이 채권최고액만 넣거나, 업로드 후 희망지역을
     # 바꾼 경우). listing.region을 우선하고 없을 때만 희망지역으로 떨어진다.
-    rate = engine.auction_rate(
-        listing.get("region") or profile.get("region", "default"),
-        listing.get("building_type", "기타"),
-        auction_rates,
-    )
+    # 매물 소재지. 낙찰가율과 최우선변제 둘 다 **매물이 있는 지역** 기준이다.
+    region = listing.get("region") or profile.get("region", "default")
+    rate = engine.auction_rate(region, listing.get("building_type", "기타"), auction_rates)
 
     def at(p: int) -> dict:
         """시세 p에서의 위험 — 민감도 밴드도 같은 경로로 만든다(l3.risk 단일 정의)."""
@@ -220,7 +218,7 @@ def _risk(
             deposit=deposit, market_price=p, senior_claims=senior,
             building_type=listing.get("building_type"), auction_rate=rate,
             model=model, insured=bool(listing.get("insured", False)),
-            priority_rule=priority_rule,
+            priority_rule=priority_rule, region=region,
         )
 
     base = at(price)
@@ -248,6 +246,10 @@ def _risk(
         "insured": bool(listing.get("insured", False)),
         # 소액임차인 최우선변제로 선순위보다 먼저 배당받는 금액(0이면 해당 없음)
         "priority_krw": base["priority_krw"],
+        # 0인 이유가 "해당 없음"인지 "지역 미지원"인지 화면이 구분해야 한다.
+        # 지금은 서울만 지원하고, 서울 밖은 보호를 얹지 않아 기대손실이 크게 잡힌다.
+        "priority_supported": base["priority_supported"],
+        "priority_region_scope": base["priority_region_scope"],
         "data_note": model.data_note,
     }
 

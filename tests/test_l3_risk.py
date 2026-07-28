@@ -125,7 +125,11 @@ class TestSmallDepositPriority:
 
 
 class TestPriorityAmountFromRules:
-    """한도·기준액은 룰 데이터에서 온다 (원칙 3). 수치는 [확인] 대상이다."""
+    """한도·기준액은 룰 데이터에서 온다 (원칙 3).
+
+    수치는 이제 [확인] 대상이 아니다 — 법제처 국가법령정보 OPEN API로 시행령 §10·§11
+    **원문을 받아** 채웠다(시행 2026-07-01). 지역 판정은 tests/test_priority_region.py.
+    """
 
     def test_rule_has_seoul_thresholds(self):
         from onjeon.rules_io import load_rules
@@ -134,22 +138,25 @@ class TestPriorityAmountFromRules:
         assert rule["threshold_krw"] > 0
         assert rule["limit_krw"] > 0
         assert rule["limit_krw"] <= rule["threshold_krw"]
-        assert "[확인" in rule["source"], "미검증 법정 수치는 [확인] 마커가 필요하다(원칙 6)"
+        # 2차 출처가 아니라 법령 원문을 인용해야 한다(원칙 2)
+        assert "법제처" in rule["source"]
+        assert rule["clause_text"], "조문 원문을 함께 보관해야 사람이 대조할 수 있다"
 
     def test_small_deposit_qualifies(self):
+        """서울 매물 기준. 지역을 안 주면 0이 되는 것이 의도된 동작이다."""
         from onjeon.l3.risk import priority_amount
         from onjeon.rules_io import load_rules
 
         rule = load_rules("market_params")["small_deposit_priority"]
-        assert priority_amount(1_000_000, rule) == 1_000_000  # 보증금 전액(한도 이하)
-        assert priority_amount(rule["threshold_krw"], rule) == rule["limit_krw"]
+        assert priority_amount(1_000_000, rule, "관악구") == 1_000_000  # 보증금 전액(한도 이하)
+        assert priority_amount(rule["threshold_krw"], rule, "관악구") == rule["limit_krw"]
 
     def test_large_deposit_gets_no_priority(self):
         from onjeon.l3.risk import priority_amount
         from onjeon.rules_io import load_rules
 
         rule = load_rules("market_params")["small_deposit_priority"]
-        assert priority_amount(rule["threshold_krw"] + 1, rule) == 0
+        assert priority_amount(rule["threshold_krw"] + 1, rule, "관악구") == 0
 
     def test_missing_rule_means_no_priority(self):
         """룰이 없으면 보호를 가정하지 않는다 — 보수적으로 0."""

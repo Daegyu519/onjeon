@@ -40,6 +40,9 @@ def _risk_of(doc: dict, deposit: int, *, model, auction_rates, market_params) ->
         model=model,
         insured=doc["offer"].get("insured", False),
         priority_rule=market_params.get("small_deposit_priority"),
+        # 최우선변제는 지역별 금액이 2배 이상 갈린다 — 안 넘기면 서울 매물도 보호가 0이 된다.
+        # address를 함께 보는 건 region이 '관악구'처럼 시군구만 담기기 때문이다.
+        region=doc["property"].get("region") or doc["property"].get("address"),
     )
 
 
