@@ -332,8 +332,12 @@ def compare_jeonse_wolse(
     ws_funding, ws_basis = _funding_breakdown(ws_deposit, assets, ws_loan, market_rate, opp)
     ws_break = {
         "연월세": annual_rent,
+        # 조특법 §95-2는 무주택 세대주 요건이 있다 — 소득 상한만 보면 조건을 절반만 본 것이고,
+        # 받지도 못할 공제를 빼주면 월세가 싸 보인다.
         "월세세액공제": -engine.wolse_tax_credit(
-            annual_rent, profile["monthly_income_krw"] * 12, tax_rules
+            annual_rent, profile["monthly_income_krw"] * 12, tax_rules,
+            is_homeless=bool(profile.get("is_homeless", True)),
+            is_household_head=bool(profile.get("is_household_head", True)),
         ),
         **ws_funding,
         "청년월세지원": -support,

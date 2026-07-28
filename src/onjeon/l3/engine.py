@@ -47,15 +47,28 @@ def annual_cost_jeonse(
     return round(loan * loan_rate + own * opportunity_rate + e_loss)
 
 
-def wolse_tax_credit(annual_rent: int, annual_income: int, tax_rules: dict) -> int:
+def wolse_tax_credit(
+    annual_rent: int, annual_income: int, tax_rules: dict,
+    *, is_homeless: bool = True, is_household_head: bool = True,
+) -> int:
     """월세 세액공제액 (조특법 §95-2 — 구간·한도는 룰 DB에서).
+
+    조문(시행 2026-07-01)이 요구하는 것: **무주택 세대주**이고, 총급여 8천만원
+    이하인 **근로소득자**. 소득 상한만 보면 조건을 절반만 본 것이다.
 
     **소득이 없으면 0이다.** 세액공제는 산출세액에서 빼는 것이라 낼 세금이 없으면
     돌려받을 것도 없다(환급형이 아니다). 구간표는 소득 상한만 보므로 그냥 매칭하면
     소득 0이 최저구간에 걸려 공제가 붙는다 — 그러면 무소득자에게 월세가 실제보다
     싸게 계산되어 전세·월세 비교의 결론이 월세 쪽으로 기운다.
+
+    **주택을 소유했거나 세대주가 아니면 0이다.** 같은 방향의 오류다 — 받지도 못할
+    공제를 빼주면 월세가 싸 보인다.
+
+    한계: 조문은 **근로소득**을 요구하는데 소득 유형을 수집하지 않는다. 사업소득만
+    있는 사람에게도 공제가 붙는다(월세를 싸게 보이게 하는 방향) — 입력을 늘리기 전엔
+    고칠 수 없어 룰의 `limitation`에 적어둔다.
     """
-    if annual_income <= 0:
+    if annual_income <= 0 or not is_homeless or not is_household_head:
         return 0
     credit_rule = tax_rules["wolse_tax_credit"]
     base = min(annual_rent, credit_rule["annual_rent_cap_krw"])

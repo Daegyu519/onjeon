@@ -123,3 +123,45 @@ class TestEligibilityAtZeroIncome:
     def test_savings_account_eligible_with_income(self, client):
         names = [r["product_name"] for r in self._recs(client, 2_800_000)["eligible"]]
         assert "청년미래적금" in names
+
+
+class TestTaxCreditRequiresHomelessHouseholdHead:
+    """조특법 §95조의2는 **무주택 세대주**를 요구한다 — 소득 상한만 보면 조건의 절반이다.
+
+    법령 원문 대조(2026-07-28, 시행 2026-07-01):
+      "주택을 소유하지 아니한 … 세대의 세대주로서 해당 과세기간의 총급여액이
+       8천만원 이하인 근로소득이 있는 근로자 … 100분의 15[5천500만원 이하는 17]"
+
+    받지도 못할 공제를 빼주면 월세가 실제보다 싸 보인다 — 소득 0 때와 같은 방향의 오류다.
+    """
+
+    RULES = None
+
+    def _credit(self, **kw):
+        return wolse_tax_credit(3_600_000, 33_600_000, load_rules("tax_rules"), **kw)
+
+    def test_homeless_household_head_gets_credit(self):
+        assert self._credit(is_homeless=True, is_household_head=True) > 0
+
+    def test_homeowner_gets_nothing(self):
+        assert self._credit(is_homeless=False, is_household_head=True) == 0
+
+    def test_non_household_head_gets_nothing(self):
+        assert self._credit(is_homeless=True, is_household_head=False) == 0
+
+    def test_api_drops_credit_for_homeowner(self, client):
+        """배선 확인 — 엔진만 고치고 호출측이 안 넘기면 화면은 그대로다."""
+        body = {
+            "profile": {**BASE["profile"], "monthly_income_krw": 2_800_000, "is_homeless": False},
+            "listing": BASE["listing"],
+        }
+        jw = client.post("/api/decision", json=body).json()["jeonse_vs_wolse"]
+        assert jw["wolse"]["breakdown"]["월세세액공제"] == 0
+
+    def test_api_keeps_credit_for_homeless(self, client):
+        body = {
+            "profile": {**BASE["profile"], "monthly_income_krw": 2_800_000, "is_homeless": True},
+            "listing": BASE["listing"],
+        }
+        jw = client.post("/api/decision", json=body).json()["jeonse_vs_wolse"]
+        assert jw["wolse"]["breakdown"]["월세세액공제"] < 0  # 비용에서 빼므로 음수

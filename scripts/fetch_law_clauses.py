@@ -51,6 +51,28 @@ TARGETS = [
         "articles": ["8"],
         "why": "최우선변제권의 근거 조항 (시행령 제10·11조가 위임받는다)",
     },
+    {
+        "key": "조세특례제한법",
+        "query": "조세특례제한법",
+        "kind": "법률",
+        "articles": ["95"],
+        "branch": "2",  # 제95조의2(월세액 세액공제). 본조 제95조와 가지번호로만 갈린다
+        "why": "월세 세액공제 — engine.wolse_tax_credit의 구간·공제율 근거",
+    },
+    {
+        "key": "지방세법",
+        "query": "지방세법",
+        "kind": "법률",
+        "articles": ["11", "111"],
+        "why": "취득세율(§11)·재산세율(§111) — 매수안 비용의 세제 근거",
+    },
+    {
+        "key": "공인중개사법 시행규칙",
+        "query": "공인중개사법 시행규칙",
+        "kind": "국토교통부령",
+        "articles": ["20"],
+        "why": "중개보수 상한요율 — 매수·임차 부대비용",
+    },
 ]
 
 
@@ -101,15 +123,16 @@ def latest_mst(query: str, kind: str | None = None) -> dict:
     return max(cur, key=lambda x: str(x.get("시행일자", "")))
 
 
-def articles(mst: str, wanted: list[str]) -> list[dict]:
+def articles(mst: str, wanted: list[str], branch: str | None = None) -> list[dict]:
     d = call("lawService.do", target="law", MST=mst)
     out = []
     for a in _flat(d.get("법령", {}).get("조문", {}).get("조문단위")):
         if str(a.get("조문번호")) not in wanted:
             continue
         # 제8조와 제8조의2는 조문번호가 둘 다 '8'이고 가지번호로만 갈린다.
-        # 안 거르면 '보증금 중 일정액의 보호'를 찾다가 '주택임대차위원회'가 딸려온다(실측).
-        if str(a.get("조문가지번호") or "").strip():
+        # 안 맞추면 '보증금 중 일정액의 보호'를 찾다가 '주택임대차위원회'가 딸려온다(실측).
+        # branch=None이면 본조만, branch="2"면 제○조의2만 집는다.
+        if str(a.get("조문가지번호") or "").strip() != (branch or ""):
             continue
         items = []
         for h in _flat(a.get("항")):
@@ -118,8 +141,9 @@ def articles(mst: str, wanted: list[str]) -> list[dict]:
             for x in _flat(h.get("호")):
                 if isinstance(x, dict) and x.get("호내용"):
                     items.append(_clean(x["호내용"]))
+        suffix = f"의{branch}" if branch else ""
         out.append({
-            "article": f"제{a.get('조문번호')}조",
+            "article": f"제{a.get('조문번호')}조{suffix}",
             "title": a.get("조문제목"),
             "text": _clean(a.get("조문내용", "")),
             "paragraphs": [_clean(str(h.get("항내용", ""))) for h in _flat(a.get("항"))
@@ -156,7 +180,7 @@ def main() -> int:
     collected, stamp = {}, date.today()
     for t in TARGETS:
         law = latest_mst(t["query"], t.get("kind"))
-        arts = articles(law["법령일련번호"], t["articles"])
+        arts = articles(law["법령일련번호"], t["articles"], t.get("branch"))
         print(f"📖 {law['법령명한글']} (시행 {law['시행일자']}, 공포 {law['공포일자']})")
         for a in arts:
             print(f"   {a['article']} {a['title']} — 호 {len(a['items'])}개")
