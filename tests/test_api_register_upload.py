@@ -52,7 +52,11 @@ class TestBuildingRegisterUpload:
         b = upload(client, DAEJEON)
         assert b["region_supported"] is False
         assert b["region_code"] is None
-        assert any("실거래가 시세를 수집하지 않은" in w for w in b["warnings"])
+        # 비서울이면 두 가지가 함께 막힌다 — 하나만 말하면 나머지를 나중에 발견한다
+        joined = " ".join(b["warnings"])
+        assert "서울 25개 구만" in joined, "지원 범위를 말해야 한다"
+        assert "실거래가 시세" in joined, "시세 자동 추정이 막히는 것을 말해야 한다"
+        assert "최우선변제" in joined, "최우선변제가 0이 되는 것을 말해야 한다"
 
     def test_document_limits_reach_the_client(self, client):
         b = upload(client, DAEJEON)
@@ -66,7 +70,7 @@ class TestBuildingRegisterUpload:
         assert b["region_supported"] is True
         assert b["region_code"] == "11680"
         assert b["exclusive_area_m2"] > 0
-        assert not any("수집하지 않은" in w for w in b["warnings"])
+        assert not any("서울 25개 구만" in w for w in b["warnings"])
 
 
 class TestManualInputCompletesTheCalculation:
