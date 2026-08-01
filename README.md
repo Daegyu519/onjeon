@@ -54,7 +54,7 @@
 
 ### 그 442만원의 출처까지 함께
 
-![근거](docs/screenshots/03-evidence.png)
+<img alt="근거 패널 — 사고확률 4.19% × 미회수율 52.7% × 보증금 2억원 = 442만원. 회수 예상액과 시세 추정 근거, 범위 35만~4,418만원을 함께 표시한다." src="docs/screenshots/03-evidence.png" width="632">
 
 $$E[Loss] = P(사고) \times LGD \times 보증금$$
 
@@ -77,8 +77,20 @@ $$E[Loss] = P(사고) \times LGD \times 보증금$$
 ## 어떻게 동작하는가
 
 <div align="center">
-<img src="diagrams/layers.png" alt="L0~L4 계층 구조" width="560">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/arch-dark.png">
+  <img alt="온전 아키텍처 — 등기부 PDF·소득·자산이 L1 문서 이해, L2 리스크 예측, L3 결정론 계산 엔진을 거쳐 결론으로 나온다. L0 룰 파이프라인이 L3에 룰 JSON을 공급하고, L4 에이전트는 결론에 문단을 덧붙이는 선택 경로다." src="docs/screenshots/arch-light.png" width="900">
+</picture>
 </div>
+
+가운데 굵은 상자 하나만 숫자를 만듭니다. **L3는 순수 함수고 AI가 아닙니다** — 의도된 설계입니다. 금융에서 숫자가 틀리면 안 되므로, 재현되지 않는 것에 계산을 맡기지 않습니다. LLM은 문서에서 읽고(L1 — 그마저도 지금은 텍스트 파싱입니다), 룰을 만들고(L0, 오프라인), 다 끝난 결과를 설명합니다(L4).
+
+점선으로 매달린 **L4는 꺼져도 됩니다.** 키가 없거나 공개 배포면 `None`이 오고 문단만 빠집니다. 화면도 숫자도 그대로입니다.
+
+<details>
+<summary>계층별 구현 — 표로 보기</summary>
+
+<br>
 
 | 계층 | 하는 일 | 구현 |
 |:---:|---|---|
@@ -88,11 +100,9 @@ $$E[Loss] = P(사고) \times LGD \times 보증금$$
 | **L3** | 세후 총비용 + E[Loss] + 등기부 등급 | 순수 함수. **AI 아님 — 의도된 설계** |
 | **L4** | 해석 문단, what-if 번역 | LLM. 실패하면 `None`이고 화면은 그대로 |
 
-> [!IMPORTANT]
-> **LLM에게 계산을 시키지 않는다.** 숫자와 판정은 결정론 계산 엔진(L3)과 공개통계 보정 모델(L2)이 냅니다.
-> LLM은 문서에서 읽고(L1), 파라미터를 조작하고(L4), 설명만 합니다. L4는 전부 선택 경로라 키가 없어도 화면은 그대로 돕니다.
-
 L1은 비전 LLM이 아닙니다. 원안([docs/design.md](docs/design.md))엔 그렇게 적혀 있지만 구현은 텍스트 파싱입니다. 계획과 구현이 갈라진 지점 전체는 [docs/architecture.md](docs/architecture.md) §1 표에 있습니다.
+
+</details>
 
 ## 문서 안내
 
