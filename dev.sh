@@ -4,11 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# editable install 확인 (이 환경은 .pth 숨김/롤백으로 수시로 풀림)
-if ! .venv/bin/python -c "import onjeon" 2>/dev/null; then
-  chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null || true
-  .venv/bin/python -c "import onjeon" 2>/dev/null || uv pip install -p .venv -e . -q
-fi
+# src를 직접 경로에 올린다 — editable install의 .pth는 이 환경에서 못 믿는다(serve.sh 주석 참조).
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}src"
 
 # 프론트 의존성 확인
 [ -d web/node_modules ] || ( cd web && npm install )

@@ -99,11 +99,8 @@ pkill -f "$APP_PATTERN" 2>/dev/null || true
 pkill -f "ngrok http" 2>/dev/null || true
 sleep 1
 
-# editable install 확인 (이 환경은 .pth 숨김/롤백으로 수시로 풀림 — serve.sh와 동일)
-if ! .venv/bin/python -c "import onjeon" 2>/dev/null; then
-  chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null || true
-  .venv/bin/python -c "import onjeon" 2>/dev/null || uv pip install -p .venv -e . -q
-fi
+# src를 직접 경로에 올린다 — editable install의 .pth는 이 환경에서 못 믿는다(serve.sh 주석 참조).
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}src"
 
 # 1) 프론트 빌드 — 공개할 화면이 web/dist다(빌드 안 하면 옛 화면이 나간다)
 echo "▶ 프론트 빌드…"
