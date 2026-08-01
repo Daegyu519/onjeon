@@ -1,11 +1,22 @@
+/* ── KB 브랜드 축 (KB 옐로우 #FFBC00 / KB 그레이 #60584C).
+      뉴트럴을 쿨(#f2f4f6·#191f28)에서 웜으로 옮기고, 순색 옐로우는 '주요 행동'에만
+      쓴다. 옐로우 면적을 넓히면 경고 배너(.risk-off)와 섞인다 — 둘의 대비는 1.57:1로
+      **색만으로는 구분이 안 된다**(측정값). 그래서 경고는 왼쪽 굵은 바로 형태를 나눈다.
+
+      의미색(--mae·--jun·--up·--down)은 건드리지 않는다. 상승=빨강/하락=파랑은
+      한국 금융 관례라 브랜드보다 우선한다 — 바꾸면 차트가 거짓말을 한다. */
 :root {
-  --bg: #f2f4f6;
+  --bg: #f7f6f3;
   --card: #ffffff;
-  --text: #191f28;
-  --text-2: #6b7684;
-  --text-3: #6b7684; /* WCAG AA: 4.6:1 on white (기존 #8b95a1은 2.9:1로 미달) */
-  --border: #e5e8eb;
-  --accent: #3182f6; /* Toss 블루 — 액티브 상태 */
+  --text: #26282b; /* 웜 잉크 — 카드 대비 14.8:1 */
+  --text-2: #6f6960; /* 5.4:1 on white, 5.0:1 on bg */
+  --text-3: #6f6960; /* WCAG AA (기존 #8b95a1은 2.9:1로 미달) */
+  --border: #e7e3db;
+  --brand: #ffbc00; /* KB 옐로우 — 주요 행동·선택됨. 면적을 작게 유지한다 */
+  --brand-press: #eda800;
+  --brand-ink: #26282b; /* 옐로우 위 글자. **흰 글씨는 1.69:1로 못 쓴다**(측정값) */
+  --accent: #60584c; /* KB 그레이 — 포커스·활성 테두리·강조 텍스트 (7.0:1) */
+  --accent-soft: rgba(96, 88, 76, 0.09);
   --mae: #00a84d; /* 매매선 (스펙) */
   --jun: #0066ff; /* 전세선 (스펙) */
   --up: #f04452; /* 상승 (한국 관례: 빨강) */
@@ -23,6 +34,12 @@
 
 * {
   box-sizing: border-box;
+}
+/* 표 → 산식 이동을 부드럽게. 감속 선호는 CSS가 지킨다(JS의 behavior:'smooth'는 무시한다) */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 body {
   margin: 0;
@@ -80,7 +97,7 @@ button {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--accent);
-  background: rgba(49, 130, 246, 0.1);
+  background: var(--accent-soft);
   padding: 5px 11px;
   border-radius: 999px;
   letter-spacing: -0.2px;
@@ -96,6 +113,50 @@ button {
   font-size: 14px;
   color: var(--text-2);
   font-weight: 500;
+}
+/* 지도 자리에 시세 흐름이 들어선 상태의 머리줄 — 돌아가는 길을 왼쪽 끝에 둔다 */
+.pick-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.back {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.back:hover {
+  border-color: var(--text-3);
+  color: var(--text);
+}
+/* 동을 고른 뒤 구 전체로 돌아가는 길. 지도 클릭만으로는 동 선택을 풀 수 없다 */
+.clear-dong {
+  margin-left: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-3);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.clear-dong:hover {
+  color: var(--text-2);
+  border-color: var(--text-3);
+}
+/* 고른 지표에 거래가 없어 다른 지표로 대체됐다는 알림 — 조용히 바꾸면 오독한다 */
+.hero .fallback {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.hero .fallback b {
+  color: var(--text-2);
 }
 .hero .price {
   margin-top: 6px;
@@ -130,6 +191,16 @@ button {
 .metric-seg {
   margin: 10px 0 2px;
 }
+/* 지표(매매/전세/월세)와 면적 단위(평/㎡)는 다른 축의 선택이라 나란히 두고 붙이지 않는다 */
+.metric-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.metric-row .metric-seg {
+  margin-left: 0;
+}
 
 /* ── 컨트롤 ── */
 .controls {
@@ -143,7 +214,7 @@ button {
   appearance: none;
   border: 1px solid var(--border);
   background: var(--card)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238b95a1' d='M6 8 0 0h12z'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236f6960' d='M6 8 0 0h12z'/%3E%3C/svg%3E")
     no-repeat right 12px center;
   border-radius: 12px;
   padding: 10px 32px 10px 14px;
@@ -153,7 +224,7 @@ button {
 }
 .seg {
   display: inline-flex;
-  background: #eaedf0;
+  background: #eeebe5;
   border-radius: 12px;
   padding: 3px;
   gap: 2px;
@@ -334,17 +405,21 @@ button {
   font-size: 13.5px;
   font-weight: 700;
 }
+/* 주요 행동 = KB 옐로우. 글자는 반드시 어두운 잉크다(흰 글씨 1.69:1). */
 .confirm-btns .ok {
-  border: 0;
-  background: var(--accent);
-  color: #fff;
+  border: 1px solid #bf7d00; /* .submit과 같은 이유 — 옐로우 면은 경계가 안 보인다 */
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.confirm-btns .ok:hover {
+  background: var(--brand-press);
 }
 
 /* ── 탭 ── */
 .tabs {
   display: inline-flex;
   align-items: center;
-  background: #eaedf0;
+  background: #eeebe5;
   border-radius: 12px;
   padding: 3px;
   gap: 2px;
@@ -356,7 +431,7 @@ button {
   font-size: 11px;
   font-weight: 800;
   color: var(--text-3);
-  border-left: 1px solid #d5dae0;
+  border-left: 1px solid #ddd8cf;
   margin-left: 4px;
 }
 .tabs button {
@@ -383,12 +458,35 @@ button {
   margin-bottom: 14px;
 }
 .prop-ctx {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12.5px;
   font-weight: 700;
   color: var(--accent);
-  background: rgba(49, 130, 246, 0.08);
-  padding: 6px 12px;
+  background: var(--accent-soft);
+  padding: 4px 4px 4px 12px; /* 오른쪽 여백은 ✕ 버튼이 채운다 */
   border-radius: 999px;
+}
+/* 24×24 — WCAG 2.2 §2.5.8 최소 타깃 크기. 알약보다 커지지 않는 선에서 최대치다. */
+.prop-ctx .clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.6;
+}
+.prop-ctx .clear:hover {
+  background: rgba(96, 88, 76, 0.16);
+  opacity: 1;
 }
 
 /* ── 진단 폼 ── */
@@ -403,6 +501,7 @@ button {
   border-top: 1px solid var(--border);
 }
 .form-grid label,
+.form-grid .fld,
 .checks .chk {
   display: flex;
   flex-direction: column;
@@ -414,13 +513,48 @@ button {
      (375px에서 실측 scrollWidth 454px). 그리드/플렉스 오버플로의 표준 원인. */
   min-width: 0;
 }
-.form-grid label span {
+.form-grid label span,
+.form-grid .fld > span {
   color: var(--text-3);
   font-weight: 600;
   font-size: 11px;
 }
+/* 라벨 + 단위 전환기를 한 줄에. 위 규칙보다 클래스가 하나 많아 라벨 글자 크기를 되찾는다 */
+.form-grid .lbl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+/* 평 ↔ ㎡ — 시세는 평당으로 나오고 등기부는 ㎡로 찍힌다. 환산을 사용자에게 맡기지 않는다 */
+.unit-tog {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--bg);
+}
+.unit-tog button {
+  border: 0;
+  background: none;
+  /* WCAG 2.5.8(최소 24×24px) — 11px 글자에 padding만 주면 17px라 모자란다 */
+  min-height: 24px;
+  padding: 2px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.unit-tog button.on {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
 /* 금액 입력 아래 한글 판독(= 1억 2,300만원) — 입력 즉시 확인 피드백 */
-.form-grid label span.gloss {
+.form-grid label span.gloss,
+.form-grid .fld > span.gloss {
   color: var(--accent);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -454,16 +588,22 @@ button {
   color: var(--text);
   font-weight: 600;
 }
+/* 테두리가 있어야 버튼임을 알 수 있다 — KB 옐로우는 흰 배경 대비 1.69:1이라
+   면만으로는 경계가 안 보인다(WCAG 1.4.11의 3:1 미달). 채도를 낮추지 않고
+   1px 진한 테두리로 경계를 만든다(#bf7d00 = 3.4:1). */
 .submit {
   width: 100%;
   margin-top: 18px;
-  border: 0;
+  border: 1px solid #bf7d00;
   border-radius: 14px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--brand);
+  color: var(--brand-ink);
   padding: 14px;
   font-size: 15px;
   font-weight: 800;
+}
+.submit:hover:not(:disabled) {
+  background: var(--brand-press);
 }
 .submit:disabled {
   opacity: 0.55;
@@ -542,6 +682,10 @@ button {
 .answer-h b.dear {
   color: var(--up);
 }
+/* 경고 배너. **왼쪽 3px 바가 브랜드 옐로우와의 유일한 구분선이다** — 경고 배경과
+   KB 옐로우 버튼의 대비는 1.57:1이라 색만으로는 같은 것으로 읽힌다(측정값).
+   면(브랜드) vs 왼쪽 바(경고)로 형태를 나눈다. 배경을 불투명으로 둔 것도 같은 이유다:
+   알파는 뒤에 뭐가 깔리느냐에 따라 색이 달라져서 두 노랑이 더 가까워질 수 있다. */
 .risk-off {
   margin-top: 12px;
   padding: 10px 12px;
@@ -549,8 +693,27 @@ button {
   font-size: 12.5px;
   font-weight: 700;
   color: #8a5a00;
-  background: rgba(255, 179, 0, 0.12);
-  border: 1px solid rgba(255, 179, 0, 0.35);
+  background: #fdf6e7;
+  border: 1px solid #f0dcae;
+  /* WCAG 1.4.11 — 정보를 나르는 그래픽은 3:1. 이 바가 브랜드와 경고를 가르는
+     유일한 신호라 여기서 미달하면 구분 자체가 없어진다. #bf7d00 = 3.4:1(카드)·3.2:1(배너) */
+  border-left: 3px solid #bf7d00;
+}
+
+/* 주의(노랑)와 차단(빨강)은 사용자가 할 수 있는 일이 다르다 — 색으로 구분한다.
+   노랑은 "확인하고 진행", 빨강은 "여기서는 진행 못 함". */
+.risk-off.blocked {
+  color: #b42318;
+  background: #fdeceb;
+  border-color: #f4c7c3;
+  border-left-color: #b42318;
+}
+/* 위험이 없다는 것도 답이다 — 경고와 같은 노랑으로 두면 좋은 소식이 주의로 읽힌다 */
+.risk-off.good {
+  color: #0a6b3d;
+  background: #e9f7ef;
+  border-color: #b6e2c9;
+  border-left-color: #0a6b3d;
 }
 
 /* ── 시그니처: 항목별 누적 바 + 혜택 절감 오버레이.
@@ -587,7 +750,7 @@ button {
   position: relative;
   height: 22px;
   border-radius: 6px;
-  background: #eef1f4;
+  background: #f0ede7;
   overflow: hidden;
 }
 .bar-stack {
@@ -673,6 +836,22 @@ button {
 .bt td.minus {
   color: var(--mae);
 }
+/* 표의 항목 → 그 금액을 만든 산식으로 이동. 항목 이름이 링크고 행 전체가 눌린다. */
+.bt tbody tr.linked {
+  cursor: pointer;
+}
+.bt tbody tr.linked:hover td {
+  background: rgba(96, 88, 76, 0.05);
+}
+.why-link {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  border-bottom: 1px dotted var(--text-3);
+}
 .bt tr.risk td:first-child {
   color: var(--up);
 }
@@ -706,12 +885,20 @@ button {
   left: 2px;
   color: var(--text-3);
 }
-.why b {
+/* 항목 머리글 — 표에서 누른 이름과 같은 말이어야 도착한 걸 안다 */
+.why-h {
+  display: block;
+  font-weight: 800;
   color: var(--text);
 }
-.why .over {
-  color: var(--up);
-  font-weight: 700;
+/* 표에서 눌러 도착한 항목. box-shadow 퍼짐으로 여백을 만들어 레이아웃이 밀리지 않는다 */
+.why li.lit {
+  border-radius: 4px;
+  background: rgba(96, 88, 76, 0.07);
+  box-shadow: 0 0 0 7px rgba(96, 88, 76, 0.07);
+}
+.why b {
+  color: var(--text);
 }
 .why .ver {
   margin-top: 6px;
@@ -720,22 +907,21 @@ button {
   font-weight: 500;
 }
 /* 시세 민감도 — 점추정 하나를 원 단위로 보여주면 실제보다 정밀해 보인다 */
-.why li.band {
+.why .band {
   margin-top: 6px;
-  padding: 8px 10px 8px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: rgba(240, 68, 82, 0.05);
   border-left: 2px solid var(--up);
   font-size: 12.5px;
+  font-weight: 600;
 }
-.why li.band::before {
-  content: none;
-}
-.why li.band b {
+.why .band b {
   color: var(--up);
   font-variant-numeric: tabular-nums;
 }
-/* 선택 입력 그룹의 부제 */
+/* 선택 입력 그룹·표 제목의 부제 */
+.comp-title .opt,
 .group-title .opt {
   font-weight: 600;
   font-size: 11.5px;
@@ -772,6 +958,10 @@ button {
   font-weight: 800;
   color: var(--text);
 }
+/* 안(전세/월세)별 인용은 그 줄 아래에 들여쓴다 — 어느 안의 근거인지 섞이지 않게 */
+.why .rate-rows .cite {
+  margin-left: 40px;
+}
 
 .why .cite a {
   color: var(--accent);
@@ -789,7 +979,7 @@ button {
   margin-bottom: 14px;
   padding: 16px 18px;
   border-radius: 14px;
-  background: #fbfcfd;
+  background: #fbfaf8;
   border: 1px solid var(--border);
 }
 .limits-h {
@@ -899,7 +1089,7 @@ button {
 }
 .badge-no {
   color: var(--text-3);
-  background: #eef1f4;
+  background: #f0ede7;
 }
 .fin-terms {
   margin-top: 6px;

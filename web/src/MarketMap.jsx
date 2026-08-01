@@ -17,7 +17,7 @@ const RAMP = {
   wolse: ['#ffe3d1', '#ffab7a', '#e8590c', '#8a3306'],
 }
 const METRIC_LABEL = { mae: '매매', jun: '전세', wolse: '환산월세' }
-const SPARSE = '#d9dee3' // 거래 희소 → 색으로 가격을 주장하지 않는다
+const SPARSE = '#dcd7ce' // 거래 희소 → 색으로 가격을 주장하지 않는다
 
 export default function MarketMap({ buildingType, period, metric, typeLabel, onPick }) {
   const [data, setData] = useState(null)
@@ -63,13 +63,13 @@ export default function MarketMap({ buildingType, period, metric, typeLabel, onP
         zoom: 1.2,
         layoutCenter: ['54%', '50%'], // 좌하단 색 범례를 피해 살짝 오른쪽
         layoutSize: '96%',
-        itemStyle: { areaColor: '#f7f8fa', borderColor: '#dfe3e8', borderWidth: 1 },
-        emphasis: { itemStyle: { areaColor: '#eef1f4' }, label: { show: false } },
+        itemStyle: { areaColor: '#faf9f6', borderColor: '#e3ded5', borderWidth: 1 },
+        emphasis: { itemStyle: { areaColor: '#f0ede7' }, label: { show: false } },
         select: { disabled: true },
       },
       tooltip: {
         trigger: 'item',
-        backgroundColor: '#191f28',
+        backgroundColor: '#26282b',
         borderWidth: 0,
         padding: [10, 12],
         textStyle: { color: '#fff', fontSize: 12 },
@@ -96,7 +96,7 @@ export default function MarketMap({ buildingType, period, metric, typeLabel, onP
         itemHeight: 110,
         calculable: true,
         inRange: { color: RAMP[metric] || RAMP.mae },
-        textStyle: { color: '#6b7684', fontSize: 11 }, // --text-3: 흰 배경 4.6:1(AA)
+        textStyle: { color: '#6f6960', fontSize: 11 }, // --text-3: 흰 배경 4.6:1(AA)
         formatter: (v) => Math.round(10 ** v).toLocaleString(), // 로그 눈금 → 원래 금액 표기
       } : undefined,
       series: [
@@ -124,6 +124,10 @@ export default function MarketMap({ buildingType, period, metric, typeLabel, onP
 
   const onEvents = useMemo(() => ({
     click: (p) => {
+      // 구 경계(geo)를 누르면 그 구 전체, 버블(series)을 누르면 그 동. 버블은 이름이
+      // '관악구 봉천동'이라 첫 어절이 구다. 구 클릭이 없으면 버블이 없는 동네는
+      // 아예 열 수 없다 — 거래가 희소한 구일수록 그렇다.
+      if (p.componentType === 'geo') return onPick(p.name, null)
       if (!p.name) return
       const [region, ...rest] = p.name.split(' ')
       onPick(region, rest.join(' '))
@@ -146,7 +150,7 @@ export default function MarketMap({ buildingType, period, metric, typeLabel, onP
 
       <div className="note">
         서울 <b>{typeLabel}</b> {METRIC_LABEL[metric]} 평당가를 법정동 중심점에 표시했어요.
-        <b>색이 진할수록 비싸고</b>, <b>원이 클수록 거래가 많습니다</b>. 버블을 누르면 그 동네의 시세 흐름으로 이동해요.
+        <b>색이 진할수록 비싸고</b>, <b>원이 클수록 거래가 많습니다</b>. <b>버블을 누르면 그 동네</b>, <b>구 경계를 누르면 그 구 전체</b>의 시세 흐름이 이 자리에 열려요.
         동네 간 가격 차가 10배를 넘어서 색은 <b>로그 눈금</b>이에요 — 색 한 칸이 일정 금액이 아니라 일정 배율입니다.
         {data && (
           <>

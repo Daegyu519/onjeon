@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from onjeon.config import load_env
 from onjeon.data_pipeline.regions import resolve_lawd_cd
 from onjeon.decision import decide
+from onjeon.l3.register_risk import grade_register
+from onjeon.l4.register_explain import explain
 from onjeon.market.building import auction_type, building_type_for_use
 from onjeon.market.cache import open_cache
 from onjeon.market.map import market_map
@@ -106,16 +108,30 @@ def post_register_parse(file: UploadFile):
         # 비서울이면 두 가지가 함께 막힌다. 하나만 말하면 나머지를 나중에 발견한다.
         warnings.append(
             f"{fields['sigungu']}는 아직 지원 범위 밖이다 — 이 서비스는 현재 서울 25개 구만 "
-            "다룬다. (1) 실거래가 시세를 수집하지 않아 시세 자동 추정이 안 되고, "
-            "(2) 소액임차인 최우선변제도 서울 기준만 있어서 보호액을 0으로 두고 계산한다. "
-            "시행령은 지역을 4구간으로 나누는데(서울 5,500만 / 그 밖의 지역 2,500만), "
-            "서울 값을 그대로 쓰면 받지도 못할 보호를 받은 것으로 계산돼 위험이 "
-            "과소평가되기 때문이다. 시세를 직접 입력하면 나머지 계산은 그대로 되고, "
-            "기대손실은 실제보다 크게(안전한 방향으로) 잡힌다."
+            "다루고, 이 지역은 의사결정 계산을 **막는다**(/api/decision이 400). "
+            "(1) 실거래가 시세를 수집하지 않아 시세 자동 추정이 안 되고, "
+            "(2) 소액임차인 최우선변제도 주택임대차보호법 시행령 §10·§11의 서울 구간만 "
+            "반영돼 있다. 시행령은 지역을 4구간으로 나누고 금액이 2배 이상 벌어지는데"
+            "(서울 5,500만 / 그 밖의 지역 2,500만), 두 축이 함께 빈 상태로 낸 기대손실은 "
+            "근거가 없다. 등기부에서 읽은 채권최고액·면적은 그대로 쓸 수 있다."
         )
+    # 등기부에 적힌 권리 제한(가압류·경매개시·신탁 등) → 등급. 결정론 룰 테이블이라
+    # 왕복도 지연도 늘지 않는다. E[Loss]와는 다른 축이다(l3.register_risk 참조).
+    register_risk = grade_register(fields)
+    # 문단 설명만 LLM(Gemini)에 맡긴다 — 곁가지라 실패해도 None이 오고 필드만 빠진다.
+    # 공개 배포(READONLY)에선 끈다: 인증 없는 업로드 1건이 곧 과금이라, 국토부 키를
+    # 막아둔 것과 같은 이유로 막아야 한다. 말할 항목이 없으면 아예 부르지 않는다.
+    # 이 핸들러는 스레드풀에서 도는 동기 함수라, 호출한 만큼 이 요청 하나가 길어진다.
+    if not _READONLY and register_risk["items"]:
+        explanation = explain(register_risk, warnings)
+        if explanation:
+            register_risk["explanation"] = explanation
     return {
-        **fields,
+        # rights(원시 탐지 결과)는 빼고 보낸다 — register_risk.items가 같은 내용을
+        # 등급까지 붙여 싣는다. 둘 다 보내면 화면이 무엇을 믿을지가 두 갈래가 된다.
+        **{k: v for k, v in fields.items() if k != "rights"},
         "warnings": warnings,
+        "register_risk": register_risk,
         "region_code": region_code,
         "region_supported": region_code is not None,
         "building_type": building_type,
@@ -209,8 +225,12 @@ def _estimate_price(listing: dict, region: str, cache) -> tuple[int | None, dict
     **지번 → 동 → 구 순으로 좁혀서 시도한다.** 시세 오차는 P(사고)와 LGD 양쪽에
     들어가 증폭되므로(±20% 밴드가 기대손실 6배를 만든다) 좁은 지역의 집계가
     훨씬 낫다. market_trends는 해당 단위에 거래가 없으면 자동으로 상위 레벨로
-    떨어지므로(`_pick_level`), 가장 좁은 것부터 요청하고 응답의 level_label이
-    실제로 쓰인 단위를 알려준다.
+    떨어지므로(`_pick_level`), 가장 좁은 것부터 요청하고 응답이 실제로 쓰인
+    단위를 알려준다.
+
+    쓰는 건 `mae_level`이지 `level`이 아니다 — 차트 레벨(level)은 전세·월세 거래도
+    세므로, 그걸 밴드에 넣으면 매매 거래가 거의 없는 건물이 '건물 단위 정밀도'를
+    주장하게 된다(trends.market_trends 독스트링 참조).
     """
     area = listing.get("exclusive_area_m2")
     btype = listing.get("building_type")
@@ -232,11 +252,11 @@ def _estimate_price(listing: dict, region: str, cache) -> tuple[int | None, dict
         pyeong_price_manwon=pyeong_manwon, area_m2=area
     ), {
         # 어느 집계 단위에서 온 값인지 — 밴드 폭이 여기에 달려 있다(decision._price_band)
-        "level": trends.get("level", "sigungu"),
+        "level": trends.get("mae_level", "sigungu"),
         "pyeong_price_manwon": pyeong_manwon,
         "area_m2": area,
         "bucket": bucket,
-        "level_label": trends.get("level_label", ""),
+        "level_label": trends.get("mae_level_label", ""),
         "note": "국토부 실거래 매매 평당가 집계 × 전용면적 — 특정 호실이 아닌 지역 평균 추정치",
     }
 
@@ -246,6 +266,23 @@ def post_decision(body: _DecisionBody, cache=Depends(get_cache)):
     """프로필+매물 → 전세 vs 월세 비교 + 적정 주거비 + 청년 금융지원."""
     profile = body.profile.model_dump()
     listing = body.listing.model_dump()
+    # 서울 밖은 계산하지 않고 막는다. 예전엔 경고만 띄우고 계산했는데, 그러면
+    # 시세 추정(캐시에 거래 0건)과 최우선변제(서울 값만 있음) 두 축이 동시에
+    # 비어 있는 상태로 숫자가 나온다 — 안내를 읽지 않은 사용자에게는 그냥
+    # '계산된 결론'으로 보인다. 근거가 반쪽인 결론을 내는 대신 입구에서 거절한다.
+    # resolve_lawd_cd가 지원 범위의 단일 정의다(업로드 경고도 같은 함수를 쓴다).
+    for label, region in (("매물 소재지", listing.get("region")), ("희망지역", profile["region"])):
+        if region and resolve_lawd_cd(region) is None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{label} '{region}'는 아직 지원하지 않습니다 — 현재 서울 25개 구만 계산합니다. "
+                    "실거래가 시세를 서울만 수집하고 있고, 소액임차인 최우선변제도 "
+                    "주택임대차보호법 시행령 §10·§11의 서울 구간(5,500만/1억6,500만)만 "
+                    "반영돼 있습니다. 다른 지역은 이 두 값이 함께 비어서 기대손실이 "
+                    "근거 없이 나오므로, 틀린 숫자를 보여드리는 대신 막았습니다."
+                ),
+            )
     # 순서 주의: market_trends는 유형 **코드**(apt/rh/offi/sh)를 받고 낙찰가율 룰은
     # **한글**을 받는다. 시세 추정을 먼저 하고 그다음에 한글로 정규화한다.
     price_source = None
