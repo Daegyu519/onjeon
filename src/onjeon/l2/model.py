@@ -96,7 +96,10 @@ def load_risk_model() -> RiskModel:
         coef={f: float(rule["coef"][f]) for f in FEATURES},
         intercept=float(rule["intercept"]),
         feature_means={f: float(rule["feature_means"][f]) for f in FEATURES},
-        data_note=rule.get("data_note", DATA_NOTE),
+        # 폴백으로 DATA_NOTE를 쓰면 안 된다 — 그건 synth 학습 모델의 출처이고
+        # (dump_risk_model.py가 그 값을 쓴다), 배포에 실리는 룰은 공개통계 보정이다.
+        # 룰에 출처가 없으면 "합성 데이터"라고 단정하는 대신 모른다고 말한다(원칙 2·5).
+        data_note=rule.get("data_note") or "출처 미상 — 룰 JSON에 data_note가 없습니다",
         periods=rule.get("periods", []),
     )
 

@@ -106,14 +106,30 @@ class TestPriceEstimation:
         assert r.status_code == 200
         assert r.json()["jeonse_vs_wolse"]["jeonse"]["risk"]["adjusted"] is False
 
-    def test_unsupported_region_does_not_raise(self, client):
-        """market_trends가 ValueError를 던지는 지역 — 500으로 새면 안 된다."""
+    def test_unsupported_profile_region_is_rejected(self, client):
+        """서울 밖 희망지역은 400으로 막는다 — 500으로 새서도, 200으로 계산돼서도 안 된다.
+
+        예전엔 경고만 띄우고 계산했다. 그러면 시세 추정과 최우선변제가 둘 다 빈
+        상태로 기대손실이 나와서, 안내를 읽지 않은 사용자에게는 근거 있는 결론처럼
+        보인다. 반쪽 근거로 결론을 내는 대신 거절한다.
+        """
         body = {
             "profile": {**BODY["profile"], "region": "존재하지않는구"},
             "listing": {**BODY["listing"], "building_type": "rh", "exclusive_area_m2": 40},
         }
         r = client.post("/api/decision", json=body)
-        assert r.status_code == 200
+        assert r.status_code == 400
+        assert "서울" in r.json()["detail"]
+
+    def test_unsupported_listing_region_is_rejected(self, client):
+        """매물 소재지도 같이 막는다 — 등기부에서 읽은 시군구가 이 경로로 들어온다."""
+        body = {
+            "profile": BODY["profile"],
+            "listing": {**BODY["listing"], "region": "수원시 팔달구"},
+        }
+        r = client.post("/api/decision", json=body)
+        assert r.status_code == 400
+        assert "매물 소재지" in r.json()["detail"]
 
     def test_user_price_wins_and_is_not_marked_estimated(self, client):
         """사용자가 넣은 매매가는 추정치가 아니다 — 화면이 둘을 다르게 표시한다."""

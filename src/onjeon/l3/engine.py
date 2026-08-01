@@ -96,6 +96,37 @@ def annual_cost_wolse(
     return round(annual_rent - credit + loan * loan_rate + own * opportunity_rate)
 
 
+def bracket_fee(amount: int, brackets: list[dict]) -> float:
+    """가액 → 구간별 요율을 적용한 금액. 룰 JSON의 구간표(법령 조문·별표)를 그대로 읽는다.
+
+    구간은 오름차순, `max_price_krw`는 그 구간의 상한(마지막은 null = 무제한)이다.
+    단일 요율을 쓰면 어느 구간에서든 조용히 틀린다 — 중개보수 0.5%가 실제로
+    그랬다(0.5%는 5천만~2억 구간이고 2억~9억은 0.4%다).
+
+    경계 처리: 지방세법 §11①8호는 '6억원 이하', 공인중개사법 별표1은 '2억원 이상
+    9억원 미만'으로 표현이 다르지만, 두 표 모두 경계에서 요율이 연속이거나 다음
+    구간과 값이 같아서 '미만' 한 가지로 읽어도 결과가 바뀌지 않는다.
+
+    `rate` 대신 `rate_from`/`rate_to`가 있으면 구간 내 선형이다 — 지방세법 §11①8호
+    나목의 (가액×2÷3억−3)÷100 이 6억에서 1%, 9억에서 3%를 지나는 1차식이라
+    선형보간과 값이 같다.
+    """
+    low = 0
+    for b in brackets:
+        top = b.get("max_price_krw")
+        if top is not None and amount >= top:
+            low = top
+            continue
+        if "rate" in b:
+            rate = b["rate"]
+        else:
+            rate = b["rate_from"] + (amount - low) / (top - low) * (b["rate_to"] - b["rate_from"])
+        fee = amount * rate
+        cap = b.get("cap_krw")
+        return min(fee, cap) if cap else fee
+    raise ValueError("구간표에 무제한 구간(max_price_krw=null)이 없다")
+
+
 def annual_cost_buy(
     *,
     price: int,
@@ -108,8 +139,11 @@ def annual_cost_buy(
     """매수 연간 실질비용 = (취득세+중개보수)/거주연수 + 보유세 + 이자 + 기회비용."""
     if stay_years <= 0:
         raise ValueError("stay_years는 1 이상이어야 한다")
-    acquisition = price * tax_rules["acquisition"]["rate"]
-    brokerage = price * tax_rules["brokerage"]["buy_rate"]
+    acq = tax_rules["acquisition"]
+    # 취득세 본세 × 지방교육세 배수. §151①1호가 '취득세율 × 50% × 20%'를 얹으므로
+    # 1.1이며, 둘을 곱해 미리 합친 단일 세율로 두면 조문 추적이 끊긴다.
+    acquisition = bracket_fee(price, acq["brackets"]) * acq["local_education_tax_multiplier"]
+    brokerage = bracket_fee(price, tax_rules["brokerage"]["buy_brackets"])
     holding = price * tax_rules["holding"]["estimate_rate"]
     own, loan = split_funding(price, user_assets)
     return round(

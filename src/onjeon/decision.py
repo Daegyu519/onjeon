@@ -379,6 +379,9 @@ def compare_jeonse_wolse(
         # 전부 가정값이고 일부는 아직 검증 전(`[확인]`)이라 화면이 감추면 안 된다.
         "rates": {
             "market_loan": market_rate,
+            # 시중대출도 익명의 '시장금리'가 아니라 실제 상품이다 — 어디를 찾아가야 하는지
+            # 말해야 판정이 행동으로 이어진다. 시장평균 대조값은 룰이 함께 들고 있다.
+            "market_loan_product": market_params.get("market_loan_product"),
             "opportunity": opp,
             "market_loan_source": market_params.get("loan_rate_source", ""),
             "opportunity_source": market_params.get("opportunity_source", ""),

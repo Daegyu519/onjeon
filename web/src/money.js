@@ -51,6 +51,17 @@ export function formatWon(n) {
   return Math.round(n).toLocaleString('en-US')
 }
 
+// ── 면적 단위: 평 ↔ ㎡ ──
+// 등기부는 면적을 ㎡로 찍고 실거래가 시세는 평당으로 나온다. 환산을 사용자 머릿속에
+// 떠넘기지 않으려면 화면이 두 단위를 다 말해야 한다. 1평 = 400/121 ㎡(계량법 환산값).
+export const PY_M2 = 400 / 121
+/** ㎡ → 평. */
+export const toPy = (m2) => m2 / PY_M2
+/** 평 → ㎡. */
+export const toM2 = (py) => py * PY_M2
+/** ㎡ 값 → "40㎡(12.1평)". 뒤 0은 숫자로 되돌려 없앤다 — 정규식으로 깎으면 '400'이 '4'가 된다. */
+export const m2py = (m2) => `${+Number(m2).toFixed(2)}㎡(${+toPy(m2).toFixed(1)}평)`
+
 // 서버 필드명 → 화면에 쓰는 말. 없는 건 필드명 그대로 보여준다(숨기는 것보다 낫다).
 const FIELD_LABEL = {
   monthly_income_krw: '월소득',
@@ -128,5 +139,9 @@ if (typeof process !== 'undefined' && import.meta.url === `file://${process.argv
   eq(glossKR(5000), '5,000원', 'g3')
   eq(glossKR(20000000), '2,000만원', 'g4')
   eq(glossKR(null), '', 'g5')
+  eq(m2py(40), '40㎡(12.1평)', 'a1')
+  eq(m2py(400), '400㎡(121평)', 'a2') // 정규식으로 0을 깎으면 '4㎡'가 되던 자리
+  eq(m2py(29.59), '29.59㎡(9평)', 'a3')
+  eq(Math.round(toM2(12) * 100) / 100, 39.67, 'a4')
   console.log('money.js selfcheck OK')
 }

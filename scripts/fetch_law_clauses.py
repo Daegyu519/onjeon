@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import re
@@ -41,8 +42,9 @@ TARGETS = [
         "key": "주택임대차보호법 시행령",
         "query": "주택임대차보호법 시행령",
         "kind": "대통령령",
-        "articles": ["10", "11"],
-        "why": "소액임차인 최우선변제 — 지역 4구간별 금액. engine의 priority_krw 입력",
+        "articles": ["9", "10", "11"],
+        "why": "소액임차인 최우선변제(§10·§11) — 지역 4구간별 금액. engine의 priority_krw 입력. "
+               "§9는 전월세전환율의 법정 상한(계약 존속 중 전환에만 적용)",
     },
     {
         "key": "주택임대차보호법",
@@ -63,15 +65,26 @@ TARGETS = [
         "key": "지방세법",
         "query": "지방세법",
         "kind": "법률",
-        "articles": ["11", "111"],
-        "why": "취득세율(§11)·재산세율(§111) — 매수안 비용의 세제 근거",
+        # §151을 빼면 취득세율 1.1%의 뒤 0.1%(지방교육세)가 근거 없는 숫자로 남는다.
+        "articles": ["11", "111", "151"],
+        "why": "취득세율(§11)·재산세율(§111)·지방교육세(§151) — 매수안 세제 근거",
+    },
+    {
+        "key": "지방세법 시행령",
+        "query": "지방세법 시행령",
+        "kind": "대통령령",
+        "articles": ["109"],
+        "why": "공정시장가액비율(주택 60%) — 재산세 개산율 0.15%의 유도 사슬 중 한 칸",
     },
     {
         "key": "공인중개사법 시행규칙",
         "query": "공인중개사법 시행규칙",
         "kind": "국토교통부령",
         "articles": ["20"],
-        "why": "중개보수 상한요율 — 매수·임차 부대비용",
+        # 요율은 조문이 아니라 별표 1에 있다. 조문만 받으면 "별표 1과 같으며"만
+        # 손에 남고 숫자는 2차 출처에서 베끼게 된다 — 실제로 0.5%를 잘못 베꼈다.
+        "tables": ["0001"],
+        "why": "중개보수 상한요율(별표 1) — 매수·임차 부대비용",
     },
 ]
 
@@ -123,11 +136,13 @@ def latest_mst(query: str, kind: str | None = None) -> dict:
     return max(cur, key=lambda x: str(x.get("시행일자", "")))
 
 
-def articles(mst: str, wanted: list[str], branch: str | None = None) -> list[dict]:
-    d = call("lawService.do", target="law", MST=mst)
+def articles(doc: dict, wanted: list[str], branch: str | None = None) -> list[dict]:
     out = []
-    for a in _flat(d.get("법령", {}).get("조문", {}).get("조문단위")):
+    for a in _flat(doc.get("법령", {}).get("조문", {}).get("조문단위")):
         if str(a.get("조문번호")) not in wanted:
+            continue
+        # 편·장·절 제목줄도 같은 조문번호를 달고 온다(조문여부='전문') — 빈 조문이 섞인다
+        if a.get("조문여부") == "전문":
             continue
         # 제8조와 제8조의2는 조문번호가 둘 다 '8'이고 가지번호로만 갈린다.
         # 안 맞추면 '보증금 중 일정액의 보호'를 찾다가 '주택임대차위원회'가 딸려온다(실측).
@@ -149,6 +164,37 @@ def articles(mst: str, wanted: list[str], branch: str | None = None) -> list[dic
             "paragraphs": [_clean(str(h.get("항내용", ""))) for h in _flat(a.get("항"))
                            if isinstance(h, dict) and h.get("항내용")],
             "items": items,
+        })
+    return out
+
+
+def tables(doc: dict, wanted: list[str]) -> list[dict]:
+    """별표를 번호로 골라 텍스트 줄로 펼친다. lawService.do 응답을 재사용한다.
+
+    별표내용은 罫線(┌─┬┐) ASCII 표를 list[list[str]]로 담아 오는데, JSON 문자열로
+    한 번 더 감싸져 오는 경우가 있어 literal_eval로 되돌린다. 표 안의 숫자를 코드에
+    옮겨 적으면 구간을 헷갈린다 — 원문 줄을 그대로 남겨 대조할 수 있게 한다.
+    """
+    out = []
+    for b in _flat((doc.get("법령", {}).get("별표") or {}).get("별표단위")):
+        # 별지 서식도 별표번호 0001을 쓴다 — 구분을 안 보면 요율표 대신
+        # '공인중개사자격시험 응시원서'가 딸려온다(실측).
+        if not isinstance(b, dict) or str(b.get("별표번호")) not in wanted:
+            continue
+        if b.get("별표구분") != "별표":
+            continue
+        raw = b.get("별표내용")
+        if isinstance(raw, str) and raw.lstrip().startswith("[["):
+            try:
+                raw = ast.literal_eval(raw)
+            except (ValueError, SyntaxError):
+                pass
+        lines = [t for cell in _flat(raw) for x in _flat(cell)
+                 if (t := _clean(x))]
+        out.append({
+            "table": f"별표 {int(b['별표번호'])}",
+            "title": _clean(b.get("별표제목", "")),
+            "lines": lines,
         })
     return out
 
@@ -180,7 +226,9 @@ def main() -> int:
     collected, stamp = {}, date.today()
     for t in TARGETS:
         law = latest_mst(t["query"], t.get("kind"))
-        arts = articles(law["법령일련번호"], t["articles"], t.get("branch"))
+        doc = call("lawService.do", target="law", MST=law["법령일련번호"])
+        arts = articles(doc, t["articles"], t.get("branch"))
+        tbls = tables(doc, t["tables"]) if t.get("tables") else []
         print(f"📖 {law['법령명한글']} (시행 {law['시행일자']}, 공포 {law['공포일자']})")
         for a in arts:
             print(f"   {a['article']} {a['title']} — 호 {len(a['items'])}개")
@@ -188,6 +236,8 @@ def main() -> int:
                 won = parse_krw(it)
                 print(f"      · {it[:74]}{'' if len(it) <= 74 else '…'}"
                       + (f"   → {won:,}원" if won else ""))
+        for tb in tbls:
+            print(f"   {tb['table']} {tb['title']} — {len(tb['lines'])}줄")
         collected[t["key"]] = {
             "law_name": law["법령명한글"],
             "mst": law["법령일련번호"],
@@ -197,6 +247,7 @@ def main() -> int:
             "link": "https://www.law.go.kr" + law.get("법령상세링크", "").replace("&type=HTML", ""),
             "why": t["why"],
             "articles": arts,
+            **({"tables": tbls} if tbls else {}),
         }
         print()
 
