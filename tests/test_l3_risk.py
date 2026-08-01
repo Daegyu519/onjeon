@@ -196,11 +196,17 @@ class TestPriceBand:
         assert _price_band({"price_level": "dong"}, None) == 0.0
 
     def test_rule_file_marks_values_unverified(self):
-        """판단값이면 [확인] 마커가 있어야 한다 (원칙 6)."""
+        """판단값이면 그렇다고 표시하고 오차 방향을 적어야 한다 (원칙 5·6).
+
+        종전에는 `[확인]` 문자열을 봤는데, 마커만으로는 '어느 쪽으로 틀리는지'를
+        읽는 사람이 알 수 없었다. 판단값은 judgment 플래그와 error_direction을
+        함께 요구한다.
+        """
         from onjeon.rules_io import load_rules
 
         rule = load_rules("market_params")["price_uncertainty_by_level"]
-        assert "[확인" in rule["source"]
+        assert rule["judgment"] is True
+        assert rule["error_direction"]
         assert rule["jibun"] < rule["dong"] < rule["sigungu"]
 
 
