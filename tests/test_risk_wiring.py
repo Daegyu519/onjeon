@@ -159,6 +159,22 @@ class TestRiskModelFromRules:
         assert rule["data_note"], "합성 데이터 한계를 문서에 남겨야 한다(원칙 5)"
         assert list(rule["coef"]) == FEATURES
 
+    def test_missing_data_note_does_not_claim_synthetic(self, monkeypatch):
+        """출처가 없는 룰은 '모른다'고 말해야 한다 — '합성 데이터'라고 단정하면 거짓이다.
+
+        폴백에 DATA_NOTE를 쓰면 배포에 실린 공개통계 보정 모델이 화면에서 '합성 데이터'로
+        소개된다. 신뢰도 서술이 조용히 뒤집히는 방향이라 예외도 경고도 나지 않는다(원칙 2).
+        """
+        from onjeon.l2 import model as model_mod
+
+        rule = load_rules("risk_model")
+        monkeypatch.setattr(
+            model_mod, "load_rules", lambda name: {k: v for k, v in rule.items() if k != "data_note"}
+        )
+        note = load_risk_model().data_note
+        assert "합성" not in note, f"출처 없는 룰을 합성 데이터라고 단정했다: {note}"
+        assert note, "빈 문자열이면 화면이 출처 칸을 그냥 비운다 — 모른다고 말해야 한다"
+
     def test_explain_decomposes_logit_exactly(self):
         """base_logit + Σ기여도 = logit(p) — XAI 주장의 근거."""
         import math

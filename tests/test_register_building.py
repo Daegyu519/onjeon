@@ -94,6 +94,63 @@ class TestAreaNotGuessed:
         assert extract_fields("전용면적 70.941")["exclusive_area_m2"] == 70.94
 
 
+# 실물 다중주택 등기부의 층별 면적표(노원구 공릉동 412-13·559-22, 2026-07-28 열람).
+# 위 DAJUNG_BUILDING과 다른 세 가지가 여기에 있고, 셋 다 실제로 결함을 만들었다:
+#   - 소수 **1자리** 면적('지1층 63.7㎡') — 2자리만 받는 정규식이 통째로 놓쳤다
+#   - '(연면적제외)' 옥탑 — 전용면적 후보가 아니다(다음 줄에 오는 판본도 있다)
+#   - **모든 층이 같은 면적** — 집합으로 합치면 후보가 1개가 돼 자동채움된다
+NOWON_DAJUNG = """등기사항전부증명서(말소사항 포함)
+- 건물 -
+[건물] 서울특별시 노원구 공릉동 412-13 태평아트1
+【 표 제 부 】 ( 건물의 표시 )
+표시번호 접 수 소재지번,건물명칭 및 번호 건 물 내 역 등기원인 및 기타사항
+1 2017년5월31일 서울특별시 노원구 공릉동 철근콘크리트구조
+412-13 태평아트1 (철근)콘크리트지붕 3층
+[도로명주소] 다중주택
+서울특별시 노원구 공릉로 1층 45.29㎡
+154-19 2층 45.29㎡
+3층 45.29㎡
+지1층 63.7㎡
+옥탑1층
+7.44㎡(연면적제외)
+【 을 구 】 ( 소유권 이외의 권리에 관한 사항 )
+1 근저당권설정 채권최고액 금391,300,000원 근저당권자 영동농업협동조합
+"""
+
+
+class TestRealDajungFloorTable:
+    def test_one_decimal_area_is_read(self):
+        """실물이 '지1층 63.7㎡'로 찍는다 — 소수 2자리만 받으면 이 층이 사라진다."""
+        note = extract_fields(NOWON_DAJUNG)["area_note"]
+        assert "63.7" in note
+
+    def test_okttap_marked_as_excluded_from_floor_area(self):
+        """옥탑 7.44㎡는 '(연면적제외)' — 전용면적 후보로 세면 안 된다."""
+        note = extract_fields(NOWON_DAJUNG)["area_note"]
+        assert "연면적제외" in note
+
+    def test_identical_floor_areas_are_not_autofilled(self):
+        """모든 층이 45.29㎡면 집합에서 하나로 합쳐진다 — 개수로 판단하면 자동채움된다.
+
+        1·2·3층만 있는 다중주택(지하·옥탑 없음)이면 후보가 45.29 하나다. 이게 전용면적으로
+        채워지면 원룸 20㎡ 세입자의 시세가 2배로 잡히고 **E[Loss]가 과소평가된다**.
+        """
+        only_same = """【 표 제 부 】 ( 건물의 표시 )
+철근콘크리트구조 3층 다중주택
+1층 45.29㎡
+2층 45.29㎡
+3층 45.29㎡
+"""
+        f = extract_fields(only_same)
+        assert f["exclusive_area_m2"] is None
+        assert "방을 빌리므로" in f["area_note"]
+
+    def test_floors_are_labelled_in_the_note(self):
+        """라벨 없는 숫자 목록은 '45.29가 답이겠지'를 유도한다 — 층을 붙여 보여준다."""
+        note = extract_fields(NOWON_DAJUNG)["area_note"]
+        assert "1층 45.29㎡" in note and "지1층 63.7㎡" in note
+
+
 class TestRoadAddressAcrossLines:
     def test_wrapped_road_address_is_joined(self):
         """표 셀에서 줄이 나뉘어도 '…로/길 번지'까지 잡는다 — 건물 특정에 필요하다."""

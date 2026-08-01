@@ -4,8 +4,13 @@
 (계획서 §3.1). 그래서 추출 실패는 예외가 아니라 None을 반환한다.
 
 가장 위험한 오작동은 **말소된 근저당까지 합산**하는 것이다. '말소사항 포함'
-증명서를 그대로 더하면 선순위가 과대계상되고 E[Loss]가 부풀려진다 —
-텍스트 레이어로는 취소선을 볼 수 없으므로, 탐지해서 신고만 하고 판단은 사용자에게 맡긴다.
+증명서를 그대로 더하면 선순위가 과대계상되고 E[Loss]가 부풀려진다. 말소는 두 경로로
+배제한다 — 취소선(도형)은 `_page_text`가 텍스트 조립에서 걷어내고, 말소 등기가 적은
+순위번호('1번근저당권설정등기말소')는 여기서 짚어 뺀다. 문서가 스스로 말하는 것만
+배제한다. 둘 다 없으면 빼지 않는다(과대 방향 = 안전 방향).
+
+반대 방향의 오탐이 더 위험하다: 유효 근저당을 말소로 오인하면 선순위가 과소계상돼
+E[Loss]가 줄고 **위험한 집이 안전해 보인다**. 그래서 순위번호 패턴을 좁게 잡는다.
 """
 
 import pathlib
@@ -80,12 +85,66 @@ class TestExtractSeniorClaims:
         assert got["senior_claims_krw"] == 0
         assert got["senior_claims_count"] == 0
 
-    def test_cancelled_document_is_flagged(self):
-        """말소사항 포함 증명서는 합계가 과대계상된다 — 신고해서 사용자가 판단하게 한다."""
+    def test_cancelled_lien_is_excluded_and_flagged(self):
+        """말소된 근저당은 뺀다 — 근거는 문서에 있다('1번근저당권설정등기말소').
+
+        이미 말소된 근저당은 담보 부담이 아니다. 합산하면 선순위가 5억 과대계상돼
+        E[Loss]가 부풀고 전세가 실제보다 나빠 보인다. 문서가 스스로 어느 순위번호가
+        말소됐는지 적으므로 이건 판단을 지어내는 게 아니라 읽는 것이다.
+        """
         got = extract_senior_claims(WITH_CANCELLED)
         assert got["includes_cancelled"] is True
-        # 취소선을 볼 수 없으므로 합계 자체는 보정하지 않는다(허구 금지)
-        assert got["senior_claims_krw"] == 620_000_000
+        assert got["senior_claims_krw"] == 120_000_000
+        assert got["senior_claims_count"] == 1
+        assert got["cancelled_claims_krw"] == 500_000_000  # 화면이 얼마를 뺐는지 말해야 한다
+
+    def test_release_date_line_is_not_read_as_rank_number(self):
+        """'2020년5월30일 해지'의 2020을 순위번호로 오인하면 유효 근저당이 사라진다.
+
+        그 방향의 오답은 선순위 과소 → E[Loss] 과소 → **위험한 집이 안전해 보인다**.
+        """
+        text = """
+        【 을 구 】
+        1  근저당권설정   채권최고액 금120,000,000원   근저당권자 국민은행
+        2  2번근저당권설정등기말소
+        2020년5월30일 해지
+        """
+        assert extract_senior_claims(text)["senior_claims_krw"] == 120_000_000
+
+    def test_unattributable_cancellation_keeps_the_amount(self):
+        """어느 순위인지 안 적혀 있으면 빼지 않는다 — 못 짚으면 과대 쪽(안전 쪽)에 남긴다."""
+        text = """
+        【 을 구 】
+        1  근저당권설정   채권최고액 금120,000,000원   근저당권자 국민은행
+        2  근저당권설정등기말소
+        """
+        got = extract_senior_claims(text)
+        assert got["senior_claims_krw"] == 120_000_000
+        assert got["cancelled_claims_count"] == 0
+
+    def test_gapgu_cancellation_does_not_touch_eulgu_liens(self):
+        """갑구의 '2번소유권이전등기말소'가 을구 2번 근저당을 지우면 안 된다."""
+        text = """
+        【 갑 구 】
+        3  2번소유권이전등기말소
+        【 을 구 】
+        2  근저당권설정   채권최고액 금80,000,000원   근저당권자 신한은행
+        """
+        assert extract_senior_claims(text)["senior_claims_krw"] == 80_000_000
+
+    def test_multiline_lien_row_is_excluded_whole(self):
+        """행은 여러 줄에 걸친다 — 순위번호는 첫 줄에만 있고 금액은 다음 줄일 수 있다."""
+        text = """
+        【 을 구 】
+        1  근저당권설정   2015년3월2일 제5000호
+           채권최고액 금50,000,000원
+           근저당권자 우리은행
+        2  근저당권설정   채권최고액 금120,000,000원   근저당권자 국민은행
+        3  1번근저당권설정등기말소
+        """
+        got = extract_senior_claims(text)
+        assert got["senior_claims_krw"] == 120_000_000
+        assert got["cancelled_claims_krw"] == 50_000_000
 
     def test_empty_text_returns_none_amount(self):
         got = extract_senior_claims("")
