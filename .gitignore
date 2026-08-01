@@ -9,8 +9,12 @@ __pycache__/
 data/qdrant/
 data/cache.db
 .run/
-# 실물 등기부 등 개인정보 문서 — 공개 리포 유출 방지
+# 실물 등기부 등 개인정보 문서 — 공개 리포 유출 방지.
+# **디렉터리 통째로** 막는다. `*.pdf`만으로는 부족하다 — OCR 폴백(함정 7·12)이
+# 촬영본·스캔본을 다루므로 .jpg/.png/.heic/덤프 .txt가 같은 폴더에 떨어진다.
+# 확장자로 막으면 그 순간 공개 저장소에 소유자 성명이 실린다.
 data/registers_raw/
+data/fixtures/real_registers/
 *.pdf
 
 # WAL 모드(cache.py open_cache) 사이드카 — 런타임 산물, 커밋 대상 아님
