@@ -68,8 +68,33 @@ PY
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git remote remove hf 2>/dev/null || true
 git remote add hf "https://huggingface.co/spaces/$REPO"
-echo "🚀 푸시 중 → $REPO ($BRANCH → main)"
-git push -f hf "$BRANCH:main"
+
+# Space 설정은 README.md 최상단 YAML로만 읽힌다(HF는 별도 설정 파일을 안 본다).
+# 그런데 GitHub은 그 YAML을 7행짜리 표로 렌더해서 저장소 첫 화면을 통째로 잡아먹는다.
+# 그래서 저장소엔 두지 않고 배포 직전 임시 커밋으로만 얹는다 — main에는 남지 않는다.
+# app_port는 Dockerfile의 EXPOSE/PORT와 반드시 같아야 한다(8000).
+HF_BRANCH="hf-deploy-$$"
+cleanup() { git checkout -q "$BRANCH" 2>/dev/null || true
+            git branch -qD "$HF_BRANCH" 2>/dev/null || true; }
+trap cleanup EXIT
+git checkout -q -b "$HF_BRANCH"
+{ cat <<'YAML'
+---
+title: 온전
+emoji: 🏠
+colorFrom: yellow
+colorTo: gray
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
+YAML
+  cat README.md; } > README.hf && mv README.hf README.md
+git add README.md
+git commit -q -m "chore(hf): Space 설정 헤더 주입 — 배포 전용 커밋"
+echo "🚀 푸시 중 → $REPO ($HF_BRANCH → main)"
+git push -f hf "$HF_BRANCH:main"
 
 echo ""
 echo "✅ 배포 완료 → https://huggingface.co/spaces/$REPO"
