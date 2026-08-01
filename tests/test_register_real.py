@@ -7,13 +7,19 @@ CLAUDE.md 함정 4·10·11이 전부 "픽스처가 실물과 달라서 버그가
 파일은 **저장소에 없다** — 소유자 이름·주민번호 일부가 담긴 발급본이라 `.gitignore`의
 `*.pdf`로 추적하지 않는다. 없으면 skip한다(다른 사람 환경에서 실패하지 않게).
 
-두 건 다 서울 노원구 공릉동 3층 다중주택, '말소사항 포함', 2026-07-28 열람.
+세 건 다 서울 노원구 공릉동, '말소사항 포함', 2026-07-28 열람.
 각주가 규칙을 명시한다: **"실선으로 그어진 부분은 말소사항을 표시함."**
 
-  412-13  갑구 1-1(민간임대주택등기)만 말소, 1-2는 유효 — 오탐/미탐을 한 문서에서 가른다
-  559-22  **표제부 표시번호 1 전체가 말소**되고 2가 유효. 을구 근저당 2건은 채권최고액에
-          실선이 없어 유효하고, 변경 전 채무자·근저당권자·주소에만 실선이 있다.
+  412-13  건물(다중주택). 갑구 1-1(민간임대주택등기)만 말소, 1-2는 유효 — 오탐/미탐을
+          한 문서에서 가른다
+  559-22  건물(다중주택). **표제부 표시번호 1 전체가 말소**되고 2가 유효. 을구 근저당 2건은
+          채권최고액에 실선이 없어 유효하고, 변경 전 채무자·근저당권자·주소에만 실선이 있다.
           매매목록의 거래가액 8.5억이 채권최고액과 같은 문서에 있다.
+  559-27  **집합건물**(제1층 제101호). 함정 10을 실물로 고정하는 자리다 — 전에는 실물
+          형식을 손으로 옮긴 픽스처뿐이었다. 같은 문서에 ㎡가 네 종류로 있고(전유부분
+          29.59 / 층별 52.36·97.06·90.05 / 대지면적 199.3 / 대지권비율 20.45) 정답은
+          전유부분 하나다. 표제부 표시번호 1·2가 전부 말소되고 3만 유효하며,
+          공동담보목록 21개 호실 중 일부해지된 행에 실선이 있다.
 """
 
 import pathlib
@@ -25,6 +31,7 @@ from onjeon.register.parse import extract_fields, parse_register_pdf
 REAL = pathlib.Path(__file__).resolve().parent.parent / "data/fixtures/real_registers"
 DAJUNG_412 = REAL / "노원구-공릉동-412-13-다중주택-말소사항포함.pdf"
 DAJUNG_559 = REAL / "노원구-공릉동-559-22-다중주택-표제부말소.pdf"
+JIPHAP_527 = REAL / "노원구-공릉동-559-27-집합건물-제101호.pdf"
 
 
 def _parse(path):
@@ -53,6 +60,11 @@ def f412():
 @pytest.fixture(scope="module")
 def f559():
     return _parse(DAJUNG_559)
+
+
+@pytest.fixture(scope="module")
+def f527():
+    return _parse(JIPHAP_527)
 
 
 class TestAddressAndKind:
@@ -198,8 +210,82 @@ class TestNoJeonyuSection:
             assert (f["floor"], f["unit"]) == (None, None)
 
 
+class TestRoadAddress:
+    """도로명주소 — 실물에선 **옆 칸 글자가 같은 줄에 섞여 든다**.
+
+    창을 열어 통째로 삼키던 예전 방식은 세 건 모두 틀렸다. 412-13은 '공릉로 1층
+    45.29㎡'의 1을 번지로 집어 **'서울특별시 노원구 공릉로 1'** — 실재할 수 있는 다른
+    주소를 확신했다. 계산에 쓰이는 값은 아니지만 API 응답에 그대로 실린다.
+    """
+
+    def test_412_number_is_not_the_floor(self, f412):
+        assert f412["road_addr"] == "서울특별시 노원구 공릉로 154-19"
+
+    def test_559_drops_interleaved_use_and_floor_area(self, f559):
+        assert f559["road_addr"] == "서울특별시 노원구 동일로182길 63-11"
+
+    def test_527_drops_interleaved_building_use(self, f527):
+        assert f527["road_addr"] == "서울특별시 노원구 동일로182길 63-21"
+
+
+class TestJiphapUnit:
+    """집합건물 실물 — ㎡가 네 종류로 있고 정답은 전유부분 하나다(함정 10)."""
+
+    def test_exclusive_area_is_the_jeonyu_one(self, f527):
+        """29.59㎡. 대지면적 199.3을 집으면 6.7배 → 시세 과대 → **E[Loss] 과소평가**."""
+        assert f527["exclusive_area_m2"] == 29.59
+        assert f527["area_note"] is None  # 읽었으므로 사유가 없다
+
+    def test_floor_and_unit(self, f527):
+        assert (f527["floor"], f527["unit"], f527["register_kind"]) == ("1", "101", "집합건물")
+
+    def test_address(self, f527):
+        assert (f527["sigungu"], f527["dong"], f527["jibun"]) == ("노원구", "공릉동", "559-27")
+
+    def test_single_live_lien(self, f527):
+        """4.8억 1건. 1-1은 '근저당권이전'(회사합병)이라 새 근저당이 아니다 — 2건으로
+        세면 선순위가 2배가 된다."""
+        assert (f527["senior_claims_krw"], f527["senior_claims_count"]) == (480_000_000, 1)
+        assert f527["cancelled_claims_krw"] == 0
+
+    def test_mixed_use_is_not_decided_for_us(self, f527):
+        """표제부에 '제1종근린생활시설/도시형생활주택'이 함께 있고 전유부분엔 용도가 없다.
+
+        근생(상가)이면 주택임대차보호법의 대항력·최우선변제가 달라진다. 둘 중 하나를
+        고르면 그 차이가 조용히 사라지므로 경고로 남긴다.
+        """
+        assert f527["building_use"] == "근린생활시설"
+        assert any("근린생활시설과 주택이 함께" in w for w in f527["warnings"])
+
+    def test_joint_collateral_warned(self, f527):
+        """공동담보목록에 21개 호실 — 4.8억이 이 호실만의 부담이 아니다."""
+        assert any("공동담보" in w for w in f527["warnings"])
+
+    def test_struck_pyojebu_leaves_only_the_live_row(self):
+        """표제부 표시번호 1·2 말소, 3만 유효 — 층 면적이 세 벌에서 한 벌로 줄어야 한다.
+
+        표시번호 1에만 있는 5층 55.05는 사라지고, 증축 후 값 90.05는 한 번 남는다.
+        안 빠지면 층이 9개로 보이고, 과하게 빠지면 표제부가 통째로 사라진다.
+        """
+        text, n, raw = _page(JIPHAP_527, 0)
+        assert (raw.count("52.36"), text.count("52.36")) == (3, 1)
+        assert (raw.count("97.06"), text.count("97.06")) == (9, 3)
+        assert "55.05" in raw and "55.05" not in text
+        assert (raw.count("90.05"), text.count("90.05")) == (2, 1)
+        assert n > 0
+
+    def test_struck_daejigwon_and_joint_collateral_rows(self):
+        """말소된 대지권 별도등기와 일부해지된 공동담보 행만 빠진다."""
+        p1, _, raw1 = _page(JIPHAP_527, 1)
+        assert "별도등기 있음" in raw1 and "별도등기 있음" not in p1
+        assert "29.59" in p1 and p1.count("199.3") == 2  # 유효한 전유부분·대지면적은 남는다
+        p2, _, raw2 = _page(JIPHAP_527, 2)
+        assert "제2층 제203호" in raw2 and "제2층 제203호" not in p2  # 2021-01-07 일부해지
+        assert "480,000,000" in p2  # 근저당 본문은 유효
+
+
 class TestTextLayerNotOcr:
-    def test_digital_text_layer(self, f412, f559):
+    def test_digital_text_layer(self, f412, f559, f527):
         """텍스트 레이어가 있으니 OCR을 타지 않는다 — 탔으면 저신뢰 경고가 붙어야 한다."""
-        for f in (f412, f559):
+        for f in (f412, f559, f527):
             assert f.get("ocr") is None

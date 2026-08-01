@@ -27,6 +27,12 @@ _USE_RE = re.compile(r"(오피스텔|아파트|연립주택|다세대주택|단�
 # 대안 순서가 아니라 **위치**가 먼저다). 다중·다가구는 다른 세입자 보증금이 선순위라
 # 위험 성격이 전혀 다르므로 더 구체적인 쪽을 먼저 찾는다.
 _SPECIFIC_USE_RE = re.compile(r"(다중주택|다가구주택|다가구용\s*단독주택)")
+# 근린생활시설과 주택이 한 표제부에 함께 적히는 건물(상가주택·도시형생활주택 저층부)이
+# 있다. 전유부분 건물내역엔 용도가 없어서 **이 호수가 어느 쪽인지 문서에 없다** —
+# 근생이면 주택임대차보호법 보호가 달라지므로 고르지 않고 경고한다(실물 559-27 제101호).
+_MIXED_USE_RE = re.compile(r"근린생활시설")
+_HOUSE_USE_RE = re.compile(r"(도시형생활주택|아파트|오피스텔|연립주택|다세대주택|"
+                           r"단독주택|다중주택|주상복합)")
 # 등기부 종류. 건물/토지 등기부는 **짝이 따로 있다** — 한쪽만 읽으면 선순위가 샌다.
 _KIND_RE = re.compile(r"\[(집합건물|건물|토지)\]")
 # 공동담보: 채권최고액이 토지·건물에 함께 걸려 있다는 표시.
@@ -35,15 +41,15 @@ _SIDO_RE = re.compile(r"(서울특별시|부산광역시|대구광역시|인천�
                       r"울산광역시|세종특별자치시|경기도|강원(?:특별자치)?도|충청북도|충청남도|"
                       r"전라북도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)")
 _SIGUNGU_RE = re.compile(r"[가-힣]+(?:시|군|구)")  # findall — sido와 겹치면 제외
-# 도로명주소. 표 셀 안에서 '대전광역시 유성구 / 대학로75번길 33'처럼 줄이 나뉘므로
-# `(.+)`로 한 줄만 잡으면 건물을 특정하는 '…로/길 번지'가 통째로 날아간다.
-# 창을 60자로 열고 '…로/길 N(-N)'까지 삼킨다. `[가-힣0-9]*`가 greedy라 '대학로75'가
-# 아니라 '대학로75번길'을 먼저 집는다(백트래킹이 더 긴 쪽을 선호).
-# 괄호는 관대하게 — OCR이 '[도로명주소]'의 닫는 괄호를 ')'로 읽는다(실측).
-# 대괄호를 강제하면 스캔본에서 도로명주소가 통째로 날아간다.
-_ROAD_RE = re.compile(
-    r"[\[(]?\s*도로명주소\s*[\])]?\s*(.{0,60}?[가-힣0-9]*(?:로|길)\s*\d+(?:-\d+)?)", re.S
-)
+# 도로명주소. 표 셀 안에서 '대전광역시 유성구 / 대학로75번길 33'처럼 줄이 나뉘고,
+# **실물에서는 옆 칸 글자가 같은 줄에 섞여 든다** — '서울특별시 노원구 공릉로 1층
+# 45.29㎡ / 154-19 2층'. 창을 열어 통째로 삼키는 방식은 여기서 '공릉로 1'을 집어
+# **실재하지 않는 주소를 확신하게 만든다**(실물 3건 중 3건이 깨졌다). 그래서 창 안의
+# 토큰 중 주소 모양인 것만 골라 잇는다 — 번지는 토큰 전체가 숫자여야 해서 '1층'이 걸리지
+# 않는다. 괄호는 관대하게 — OCR이 '[도로명주소]'의 닫는 괄호를 ')'로 읽는다(실측).
+_ROAD_RE = re.compile(r"[\[(]?\s*도로명주소\s*[\])]?")
+_ROAD_PLACE_RE = re.compile(r"(?:시|군|구|읍|면)$")  # 시군구·읍면(시도는 _SIDO_RE로 본다)
+_ROAD_NUM_RE = re.compile(r"\d+(?:-\d+)?")  # 번지 — fullmatch로 쓴다('1층'·'45.29㎡' 배제)
 _DONG_RE = re.compile(r"[가-힣]+(?:동|가|리)")  # 법정동(예: 봉천동) — 첫 매치
 _JIBUN_RE = re.compile(r"\d+(?:-\d+)?")  # 지번(예: 100-1) — dong 매치 위치 이후에서 검색
 # 을구 근저당 채권최고액. '금' 유무·공백 변형을 허용하되 '채권최고액' 키워드를 요구해
@@ -364,6 +370,27 @@ def _extract_area(text: str, excl: dict, use: str | None = None) -> tuple[float 
     return None, head + " " + why + "계약서의 전용면적을 직접 입력해야 시세·기대손실이 계산된다."
 
 
+def _road_addr(text: str) -> str | None:
+    """'도로명주소' 뒤 창에서 주소 모양 토큰만 골라 잇는다 — 옆 칸 글자를 버린다."""
+    m = _ROAD_RE.search(text)
+    if not m:
+        return None
+    parts, road_seen = [], False
+    # ponytail: 창 200자·24토큰. 이 안에 번지가 없으면 못 읽은 것으로 둔다(라벨만 남기지 않는다).
+    for tok in text[m.end():m.end() + 200].split()[:24]:
+        if "도로명주소" in tok:  # 등기원인 칸의 '도로명주소'가 먼저 잡힐 수 있다
+            continue
+        if not road_seen:
+            if "로" in tok or "길" in tok:  # 도로명
+                road_seen = True
+            elif not (_SIDO_RE.fullmatch(tok) or _ROAD_PLACE_RE.search(tok)):
+                continue  # 용도·층 면적 등 옆 칸 글자
+            parts.append(tok)
+        elif _ROAD_NUM_RE.fullmatch(tok):
+            return " ".join([*parts, tok])
+    return None
+
+
 def register_limits(text: str, building_use: str | None) -> list[str]:
     """이 문서로는 **볼 수 없는** 위험을 문장으로 남긴다.
 
@@ -382,6 +409,13 @@ def register_limits(text: str, building_use: str | None) -> list[str]:
         out.append(
             "공동담보로 설정된 근저당이 있다 — 채권최고액이 토지와 건물에 함께 걸려 "
             "있어서 이 건물만의 부담이 아니다. 경매 회수액 추정이 달라진다."
+        )
+    if _MIXED_USE_RE.search(text) and _HOUSE_USE_RE.search(text):
+        out.append(
+            "표제부에 근린생활시설과 주택이 함께 적혀 있다 — 전유부분 건물내역엔 용도가 "
+            "없어서 이 호수가 어느 쪽인지 등기부만으로는 정할 수 없다. 근린생활시설(상가)이면 "
+            "주택임대차보호법의 대항력·최우선변제가 달라지므로 건축물대장으로 확인해야 한다. "
+            "실거래가 유형도 자동 분류되지 않으니 시세는 직접 골라야 한다."
         )
     if building_use and ("다중" in building_use or "다가구" in building_use):
         out.append(
@@ -417,7 +451,6 @@ def extract_fields(text: str) -> dict:
     sido_val = sido.group(1) if sido else None
     # 시군구: '시/군/구' 토큰 중 sido(예: 서울특별시)와 겹치지 않는 첫 번째
     sigungu_val = next((t for t in _SIGUNGU_RE.findall(text) if t != sido_val), None)
-    road = _ROAD_RE.search(text)
     # 동은 시군구 '뒤'에서 찾는다 — '성동구'의 '동' 오매칭 방지
     after = text.find(sigungu_val) + len(sigungu_val) if sigungu_val and sigungu_val in text else 0
     dong_m = _DONG_RE.search(text, after)
@@ -443,8 +476,7 @@ def extract_fields(text: str) -> dict:
         "sigungu": sigungu_val,
         "dong": dong_val,
         "jibun": jibun_val,
-        # 표 셀에서 줄이 나뉘므로 공백을 한 칸으로 눌러 붙인다
-        "road_addr": " ".join(road.group(1).split()) if road else None,
+        "road_addr": _road_addr(text),
         "exclusive_area_m2": area_val,  # None 가능 — area_note에 사유가 있다
         "area_note": area_note,
         "building_use": use_val,

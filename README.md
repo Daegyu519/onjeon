@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/FastAPI-0.139-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/React-19_+_Vite_8-61DAFB?logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/ECharts-6-AA344D?logo=apacheecharts&logoColor=white" alt="ECharts" />
-  <img src="https://img.shields.io/badge/tests-555_passed-4C9A2A" alt="tests" />
+  <img src="https://img.shields.io/badge/tests-567_passed-4C9A2A" alt="tests" />
 </p>
 
 <p align="center"><sub>KB Future Finance A.I. Challenge 출품작</sub></p>
@@ -134,7 +134,7 @@ $$E[Loss] = P(사고) \times LGD \times 보증금$$
 | **LLM** | Google Gemini 2.5 Flash (선택 경로) · Anthropic 폴백 |
 | **캐시** | SQLite (WAL) — 국토부 실거래 캐시 |
 | **룰 DB** | 버전 태그 JSON (`YYYY-MM`) — 세제·시장·낙찰가율·금리·상품·등기부권리 |
-| **테스트** | pytest 555개 |
+| **테스트** | pytest 567개 |
 
 ### 데이터 출처
 
@@ -177,7 +177,7 @@ onjeon/
 │   ├── market/               # 시세 집계·지도·캐시
 │   └── rules/                # 버전 태그 룰 JSON (YYYY-MM)
 ├── scripts/                  # 데이터 수집 · 캐시 워밍 · 모델 보정
-├── tests/                    # pytest 555개
+├── tests/                    # pytest 567개
 ├── docs/                     # 문제 정의 · 아키텍처 · 설계 · 데이터 파이프라인
 ├── dev.sh serve.sh tunnel.sh # 개발 / 로컬 프로덕션 / 공개 시연
 └── Dockerfile render.yaml    # 컨테이너 배포 폴백
@@ -201,6 +201,7 @@ onjeon/
 - **취소선(도형)과 순위번호 참조** 두 경로로 말소 기록을 제외합니다 — 텍스트만 읽으면 말소된 근저당이 유효한 것과 섞입니다
 - 집합건물 전용면적은 `전유부분` 절만 잘라 읽습니다 (대지면적·대지권비율과 구분)
 - 건물 등기부(다중·다가구)는 층별 면적이 여러 줄이라 **자동 채움을 하지 않습니다**
+- 용도가 두 개 적힌 건물(근린생활시설 + 주택)은 그 호수가 어느 쪽인지 문서에 없으므로 **고르지 않고 경고합니다** — 근생이면 주택임대차보호법의 대항력·최우선변제가 달라집니다
 - 텍스트 레이어가 없으면 OCR 폴백 (렌더 배율 3)
 
 ### `l3/register_risk.py` – 등기부에 **적힌** 권리 제한
@@ -250,7 +251,7 @@ cp .env.example .env
 ### 실행
 
 ```bash
-.venv/bin/python -m pytest        # 전체 테스트 555개
+.venv/bin/python -m pytest        # 전체 테스트 567개
 ```
 
 | 목적 | 명령 | 접속 |
@@ -319,6 +320,9 @@ KB국민은행 팔레트 기반. 대비비는 실측값이며 전부 WCAG AA를 
 - **등기부에 안 적히는 위험은 못 봅니다** — 임대인의 국세 체납, 다가구주택의 선순위 임차인
 - **집계 마진 보정에는 생태학적 오류가 있습니다** — 지역 평균 계수를 개별 매물에 적용합니다
 - **보증에 가입한 매물만 잡힌 통계**라 실제 위험은 이보다 클 수 있습니다
-- 남은 작업: 실제 등기부 샘플 10건 L1 정확도 표, `[확인]` 수치 전수 재검증, 근저당비율 계수 실측, 보유세 구간 누진화, 임대차 중개보수 반영
+- **다중주택은 면적 입력이 결론을 바꿉니다** — 방 20㎡ 기준 기대손실 6,831만원, 건물 연면적
+  기준 0원. 등기부에 방 면적이 없어 사용자가 넣습니다. 보수적인 쪽을 쓰고 경고를 붙입니다
+- 남은 작업: 실물 등기부 스캔·촬영본과 아파트·오피스텔 유형 확보(현재 3건 — 건물 2·집합건물 1),
+  `[확인]` 수치 전수 재검증, 근저당비율 계수 실측, 보유세 구간 누진화, 임대차 중개보수 반영
 
 `[확인]` 마커가 붙은 수치는 최신 기준 검증 전이므로 확정된 사실로 취급하지 마세요.
