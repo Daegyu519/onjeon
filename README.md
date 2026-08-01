@@ -5,19 +5,13 @@
   <img alt="온전 穩全 — 등기부등본을 읽고 보증금 미회수 위험을 원(₩) 단위 기대손실로 환산합니다. 정성 등급 '위험도 — 주의'가 '연 442만원'으로 바뀝니다." src="docs/screenshots/banner-light.png" width="840">
 </picture>
 
-<br><br>
-
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React_+_Vite-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![데이터](https://img.shields.io/badge/데이터-국토부·법제처·금감원-F4B400?style=flat-square)
 ![tests](https://img.shields.io/badge/tests-555-4C9A2A?style=flat-square)
 
-<br>
-
 ### 이 집, 위험을 감안하면 전세가 월세보다 정말 싼가?
-
-<br>
 
 ![결론 화면](docs/screenshots/01-answer.png)
 
