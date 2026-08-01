@@ -37,7 +37,7 @@ pinned: false
 
 ```
 등기부 PDF 업로드
-  → L1: LLM 비전 파싱 (채권최고액·선순위 추출, 원문 위치 인용)
+  → L1: 텍스트 파싱 (채권최고액·선순위 추출, 말소 제외, 스캔본은 OCR 폴백)
   → L2: 사고확률 P(사고) — 공개 통계 집계 마진 보정 + 기여도 분해
   → L3: 결정론적 계산 — 3안 세후 총비용 + 기대손실 E[Loss] = P(사고)×LGD×보증금
   → L4: LLM 해석·인용 + what-if 질의응답
@@ -50,9 +50,11 @@ pinned: false
 
 | 문서 | 내용 | 이런 질문에 답함 |
 |---|---|---|
+| [docs/summary.md](docs/summary.md) | **과제 요약** — 제출·발표용 (150자/400자/전문) | "이 과제가 뭔데?" |
 | [CLAUDE.md](CLAUDE.md) | 프로젝트 원칙·구조·컨벤션 | "이 프로젝트의 규칙은?" |
-| [docs/architecture.md](docs/architecture.md) | L0~L4 5계층 아키텍처 | "시스템이 왜 이렇게 나뉘는가?" |
-| [docs/design.md](docs/design.md) | 상세 설계도 — 모듈 스펙, 수식, 데이터 스키마, 화면 | "정확히 무엇을 어떻게 만드는가?" |
+| [docs/problem.md](docs/problem.md) | 문제 정의 — 가치·경쟁·범위 밖·한계 | "왜 이걸 만드는가? 뭘 안 푸는가?" |
+| [docs/architecture.md](docs/architecture.md) | **as-built** 설계도 — 계층별 실제 구현, 데이터 흐름 | "지금 실제로 어떻게 돌아가는가?" |
+| [docs/design.md](docs/design.md) | 원안(2026-07-19) — 모듈 스펙, 수식, 스키마, 화면 | "무엇을 만들 **계획**이었나?" |
 | [docs/workflow.md](docs/workflow.md) | 4주 MVP 계획, 역할 분담, 데모 시나리오 | "누가 언제 무엇을 하는가?" |
 | [docs/data-pipeline.md](docs/data-pipeline.md) | 데이터 수집 방향 — 소스 5종, 갱신 절차, 사용법 | "데이터는 어디서 어떻게 채우는가?" |
 

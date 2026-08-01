@@ -20,3 +20,6 @@ data/cache.db-shm
 
 # 공모전 제안서 초안 — 로컬 전용. 공개 저장소라 의도적으로 추적하지 않는다.
 KB_AI_Challenge_제안서_초안.md
+
+# 문서 빌드 산출물(docx·pdf·html) — docs/summary.md와 diagrams/에서 재생성된다.
+dist-docs/
