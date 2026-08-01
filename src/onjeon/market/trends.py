@@ -67,16 +67,17 @@ def _filter(deals: list[dict], level: str, dong: str | None, jibun: str | None) 
     raise ValueError(f"알 수 없는 level: {level!r}")
 
 
-def _bucket_count(mae_deals: list[dict], jun_deals: list[dict], gran: str) -> int:
-    """매매+전세 합산, 서로 다른 버킷(기간 단위) 수."""
-    keys = {bucket_key(d["deal_date"], gran) for d in mae_deals}
-    keys |= {bucket_key(d["deal_date"], gran) for d in jun_deals}
-    return len(keys)
+def _bucket_count(deal_lists: list[list[dict]], gran: str) -> int:
+    """주어진 거래 목록들을 합산했을 때 서로 다른 버킷(기간 단위) 수."""
+    return len({bucket_key(d["deal_date"], gran) for deals in deal_lists for d in deals})
 
 
-def _pick_level(mae_deals: list[dict], jun_deals: list[dict], dong: str | None,
+def _pick_level(deal_lists: list[list[dict]], dong: str | None,
                 jibun: str | None, gran: str) -> str:
-    """가장 좁은 레벨부터: 합산 버킷 수 >= MIN_BUCKETS면 채택. sigungu는 무조건 최종 폴백."""
+    """가장 좁은 레벨부터: 합산 버킷 수 >= MIN_BUCKETS면 채택. sigungu는 무조건 최종 폴백.
+
+    어떤 거래 종류를 세느냐는 호출측이 정한다 — 용도가 다르기 때문이다(market_trends 참조).
+    """
     candidates = []
     if dong and jibun:
         candidates.append("building")
@@ -87,9 +88,8 @@ def _pick_level(mae_deals: list[dict], jun_deals: list[dict], dong: str | None,
     for level in candidates:
         if level == "sigungu":
             return level
-        mae_f = _filter(mae_deals, level, dong, jibun)
-        jun_f = _filter(jun_deals, level, dong, jibun)
-        if _bucket_count(mae_f, jun_f, gran) >= MIN_BUCKETS:
+        filtered = [_filter(deals, level, dong, jibun) for deals in deal_lists]
+        if _bucket_count(filtered, gran) >= MIN_BUCKETS:
             return level
     return "sigungu"  # 방어적 폴백(candidates에 항상 sigungu가 있어 실제로는 도달하지 않음)
 
@@ -106,8 +106,13 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
                   service_key=None, http_get=None, retry_wait=None,
                   dong=None, jibun=None, conversion_rate=None,
                   allow_fetch=True) -> dict:
-    """지역·용도·기간 → {dates, mae_price, jun_price, wolse_price, level, level_label}
-    (매매·전세는 평당 만원 정수, 월세는 평당 환산월세 만원(소수1) — 결측 None).
+    """지역·용도·기간 → {dates, mae_price, jun_price, wolse_price, level, level_label,
+    mae_level, mae_level_label} (매매·전세는 평당 만원 정수, 월세는 평당 환산월세
+    만원(소수1) — 결측 None).
+
+    레벨이 둘인 이유: level은 "이 화면에 추세선을 그릴 만큼 거래가 있는 가장 좁은
+    범위"(3종 합산)이고, mae_level은 "이 매물의 매매 시세를 얼마나 좁혀 말할 수
+    있는가"(매매만)다. 후자만 시세 추정·기대손실 밴드에 써야 한다.
 
     dong/jibun(대상 매물의 법정동·지번)을 주면 계단식으로 매물단위까지 좁힌다.
     기본값 None이면 필터 없음(sigungu, 기존 동작과 동일) — 하위호환.
@@ -148,7 +153,16 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
                 unavailable.append(out_key)
         all_deals[out_key] = cache_mod.load_deals(cache, region_code, building_type, kind, months)
 
-    level = _pick_level(all_deals["mae_price"], all_deals["jun_price"], dong, jibun, gran)
+    # 차트 레벨은 3종을 전부 센다. 매매+전세만 세면 월세 위주 건물이 동 평균으로
+    # 희석된다(실측: 신림동 613-13은 월세 101건/44개월인데 전세 1건이라 dong으로
+    # 떨어졌다) — 원룸 월세는 우리 타깃 매물이 정확히 그 패턴이다.
+    level = _pick_level(list(all_deals.values()), dong, jibun, gran)
+    # 시세 밴드 레벨은 매매만 세서 따로 뽑는다. api._estimate_price는 mae_price만 쓰는데
+    # 거기에 차트 레벨을 주면 전세·월세 거래량이 매매 시세의 정밀도를 대신 주장하고,
+    # 그 레벨이 decision._price_band로 들어가 E[Loss] 범위를 좁힌다(실측 1년 창:
+    # 월세를 세면 3,910개 지번의 밴드가 근거 없이 좁아졌고, 전세가 끌어올리던
+    # 5,586개는 원래부터 근거가 없었다).
+    mae_level = _pick_level([all_deals["mae_price"]], dong, jibun, gran)
 
     series = {}
     all_buckets: set[str] = set()
@@ -170,6 +184,9 @@ def market_trends(region, building_type, period, *, cache, today=None, queried_a
         "wolse_price": [series["wolse_price"].get(d) for d in dates],
         "level": level,
         "level_label": _level_label(level, region, dong, jibun),
+        # 매매 시세 추정 전용 — 차트 레벨과 다를 수 있다(위 주석)
+        "mae_level": mae_level,
+        "mae_level_label": _level_label(mae_level, region, dong, jibun),
         "unavailable": unavailable,
         # 읽기 전용 응답임을 명시 — 빈 구간이 '거래 없음'이 아니라 '아직 워밍 안 됨'일 수 있다
         "cache_only": not allow_fetch,
