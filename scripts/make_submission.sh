@@ -40,17 +40,23 @@ cp "$REPO/docs/제출_체크리스트.md" "$PKG/00_제출_체크리스트.md"
 
 # ── 2. 참가신청서 + 서식. 서식은 미서명본이라 하위 폴더에 따로 둔다 —
 #      서명본으로 교체했는지 눈에 보이게 하려는 것이다(체크리스트 3·4번).
-shopt -s nullglob
-found_forms=0
-for f in "$FORMS"/*참가신청서*.docx; do
-  case "$f" in *"~\$"*) continue;; esac   # Word 임시 잠금파일(~$…) 제외
-  cp "$f" "$PKG/01_참가신청서/"; found_forms=1
-done
-for f in "$FORMS"/"[KB AICHALLENGE_필수 제출 서류]"/*.pdf; do
-  cp "$f" "$PKG/01_참가신청서/서식_원본(서명전)/"
-done
-shopt -u nullglob
-[ "$found_forms" = 1 ] || echo "⚠ 참가신청서 docx를 못 찾았습니다($FORMS) — 직접 넣으세요."
+#
+#      **한글 리터럴로 파일을 찾지 않는다.** macOS는 브라우저로 받은 파일명을 NFD(분해형)로
+#      저장하는 일이 있고, bash 글롭은 정규화를 하지 않아 NFC로 적은 `*참가신청서*`가 그
+#      파일을 조용히 놓친다(실측: Downloads의 두 신청서 중 하나만 잡혔다). 하필 작성본이
+#      NFD였다면 참가신청서 없는 zip을 제출했을 것이다. 그래서 ASCII 부분으로만 찾는다.
+APP_DOC="${APP_DOC:-$(ls -t "$FORMS"/*Challenge*.docx 2>/dev/null | grep -v '/~\$' | head -1)}"
+[ -n "$APP_DOC" ] && [ -f "$APP_DOC" ] || {
+  echo "✗ 참가신청서 docx를 찾지 못했습니다. APP_DOC=<경로>로 지정하세요. (탐색: $FORMS)" >&2
+  exit 1; }
+cp "$APP_DOC" "$PKG/01_참가신청서/"
+echo "   참가신청서: $(basename "$APP_DOC")   ← 여러 개면 가장 최근 것"
+
+form_count=0
+while IFS= read -r -d '' f; do
+  cp "$f" "$PKG/01_참가신청서/서식_원본(서명전)/"; form_count=$((form_count + 1))
+done < <(find "$FORMS" -maxdepth 2 -type f -name '*.pdf' -path '*AICHALLENGE*' -print0)
+[ "$form_count" -gt 0 ] || echo "⚠ 서약서·개인정보 동의서 서식을 못 찾았습니다 — 직접 넣으세요."
 
 # ── 3. 기술설명서
 cp "$DECK_PPTX" "$DECK_PDF" "$PKG/02_기술설명서/"
