@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>온전(穩全) — KB Future Finance A.I. Challenge 제8회 기술설명서</title>
+<style>
+/* KB 팔레트 — 프로젝트 web/src/index.css와 같은 계열(따뜻한 중립 + KB 옐로) */
+:root{
+  --bg:#1b1917; --surface:#252119; --line:#3a352c;
+  --text:#f6f3ec; --muted:#a99f8f; --dim:#7b7263;
+  --kb:#ffbc00; --kb-deep:#bf7d00; --kb-ink:#26282b;
+  --bad:#e5674a; --good:#7fb069;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text); overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+  -webkit-font-smoothing:antialiased; word-break:keep-all;
+}
+.deck{position:absolute;inset:0;margin:auto;width:100vw;height:100vh;overflow:hidden}
+@media(min-width:769px){.deck{max-width:calc(100vh*16/9);max-height:calc(100vw*9/16)}}
+
+.slide{
+  position:absolute;inset:0;padding:5.2vmin 6.4vmin;
+  display:flex;flex-direction:column;justify-content:center;
+  opacity:0;visibility:hidden;transition:opacity .35s ease;
+  background:var(--bg);overflow:hidden;
+}
+.slide.active{opacity:1;visibility:visible}
+/* 기본은 '보임'이다. 애니메이션은 덤으로만 붙인다 — opacity:0을 기본값으로 두면
+   애니메이션이 안 도는 환경(reduced-motion, 헤드리스, 구형 브라우저)에서 슬라이드가
+   통째로 백지가 된다. 심사장에서 이게 터지면 복구할 방법이 없다.
+   PNG/PDF 빌드도 이 경로를 탄다 — 헤드리스 캡처가 백지로 나오면 제출물이 백지다. */
+.anim>*{opacity:1}
+@media (prefers-reduced-motion: no-preference){
+  .slide.active .anim>*{opacity:0;animation:up .5s ease-out forwards}
+  .slide.active .anim>*:nth-child(1){animation-delay:.05s}
+  .slide.active .anim>*:nth-child(2){animation-delay:.15s}
+  .slide.active .anim>*:nth-child(3){animation-delay:.25s}
+  .slide.active .anim>*:nth-child(4){animation-delay:.35s}
+  .slide.active .anim>*:nth-child(5){animation-delay:.45s}
+}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* 타이포 */
+.kicker{color:var(--kb);font-size:1.65vmin;font-weight:700;letter-spacing:.16em;margin-bottom:1.5vmin}
+h1{font-size:7.6vmin;font-weight:800;line-height:1.15;letter-spacing:-.02em}
+h2{font-size:4.2vmin;font-weight:800;line-height:1.25;letter-spacing:-.02em;margin-bottom:2.4vmin}
+.lead{font-size:2.4vmin;color:var(--muted);line-height:1.65;max-width:78ch}
+.note{font-size:1.65vmin;color:var(--dim);line-height:1.6;margin-top:2.2vmin}
+.hl{color:var(--kb)}
+b{color:var(--text);font-weight:700}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;color:var(--kb)}
+
+/* 표지 */
+.cover{justify-content:center;align-items:flex-start}
+.cover .mark{font-size:2.1vmin;color:var(--muted);letter-spacing:.06em;margin-bottom:2.6vmin}
+.cover h1{max-width:22ch}
+.cover .q{
+  margin-top:3.4vmin;padding-left:2.6vmin;border-left:4px solid var(--kb);
+  font-size:2.9vmin;color:var(--text);line-height:1.5;font-weight:600;
+}
+.cover .foot{margin-top:auto;font-size:1.75vmin;color:var(--dim)}
+
+/* 표지 메타 (과제명 · 주제 · 팀) */
+.meta{display:grid;grid-template-columns:11vmin 1fr;gap:.9vmin 2.4vmin;margin-top:3.4vmin;
+  font-size:1.9vmin;align-items:baseline}
+.meta dt{color:var(--dim);font-size:1.65vmin}
+.meta dd{color:var(--text)}
+.blankfill{display:inline-block;min-width:24vmin;border-bottom:1px dashed var(--dim);color:var(--dim);
+  font-size:1.7vmin;padding:0 .6vmin}
+
+/* 카드 */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:2vmin;margin-top:1vmin}
+.cards.two{grid-template-columns:1fr 1fr}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:1.4vmin;
+  padding:2.7vmin;display:flex;flex-direction:column;gap:1.1vmin;
+}
+.card .t{font-size:2.1vmin;font-weight:700}
+.card .d{font-size:1.8vmin;color:var(--muted);line-height:1.6}
+.card.on{border-color:var(--kb);background:linear-gradient(180deg,rgba(255,188,0,.09),transparent)}
+
+/* 점유형태 비교 */
+.tenure{display:flex;gap:3vmin;align-items:flex-end;margin:3vmin 0}
+.ten{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:1.2vmin;text-align:center}
+/* 높이는 여기서 고정한다. 100%로 두면 부모가 auto라 0으로 붕괴해 막대가 사라진다. */
+.ten .bars{display:flex;gap:1.4vmin;align-items:flex-end;height:24vmin;justify-content:center}
+.ten .bar{width:4.4vmin;border-radius:.5vmin .5vmin 0 0;position:relative}
+.ten .bar span{position:absolute;top:-2.8vmin;left:0;right:0;font-size:1.7vmin;color:var(--muted)}
+.ten .lab{font-size:1.9vmin;color:var(--muted)}
+.b22{background:#4a4438}
+.b24{background:var(--kb)}
+
+/* 다이버징 막대 */
+.div-chart{margin:2vmin 0 1vmin}
+.row{display:grid;grid-template-columns:15vmin 1fr;align-items:center;gap:2vmin;margin-bottom:2vmin}
+.row .rl{font-size:1.85vmin;color:var(--muted);text-align:right;line-height:1.35}
+.track{position:relative;height:5vmin;background:var(--surface);border-radius:.6vmin;border:1px solid var(--line)}
+.zero{position:absolute;top:-.6vmin;bottom:-.6vmin;width:2px;background:var(--dim);left:12%}
+.zlab{position:absolute;top:-3vmin;left:12%;transform:translateX(-50%);font-size:1.5vmin;color:var(--dim)}
+.fill{position:absolute;top:.7vmin;bottom:.7vmin;border-radius:.4vmin;display:flex;align-items:center}
+.fill .v{position:absolute;left:calc(100% + 1.2vmin);white-space:nowrap;font-size:1.95vmin;font-weight:700}
+.fill.neg{background:var(--good);right:88%;border-radius:.4vmin}
+.fill.neg .v{left:auto;right:calc(100% + 1.2vmin);color:var(--good)}
+.fill.pos{background:var(--kb-deep);left:12%}
+.fill.pos.big{background:var(--kb)}
+.fill.pos .v{color:var(--text)}
+/* 막대가 트랙 끝까지 가면 바깥 라벨이 화면 밖으로 잘린다. 안쪽으로 넣는다. */
+.fill.pos.big .v{left:auto;right:1.4vmin;color:var(--kb-ink)}
+
+/* 큰 숫자 */
+.flip{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:3vmin;margin:3vmin 0}
+.state{background:var(--surface);border:1px solid var(--line);border-radius:1.4vmin;padding:3.2vmin;text-align:center}
+.state .cap{font-size:1.85vmin;color:var(--muted);margin-bottom:1.3vmin}
+.state .num{font-size:6.2vmin;font-weight:800;letter-spacing:-.03em;line-height:1}
+.state .sub{font-size:1.95vmin;margin-top:1.3vmin;font-weight:700}
+.state.a .num,.state.a .sub{color:var(--good)}
+.state.b{border-color:var(--kb)}
+.state.b .num,.state.b .sub{color:var(--kb)}
+.arrow{font-size:4vmin;color:var(--dim)}
+
+/* 표 */
+table{width:100%;border-collapse:collapse;font-size:1.85vmin;margin-top:1vmin}
+th,td{padding:1.3vmin 1.1vmin;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:600;font-size:1.6vmin}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.key td{color:var(--kb);font-weight:700}
+td.blank{color:var(--line)}
+table.tight{font-size:1.7vmin}
+table.tight th,table.tight td{padding:1vmin .9vmin}
+
+/* 계층 */
+.stack{display:flex;flex-direction:column;gap:1.1vmin;margin-top:1vmin}
+.layer{display:grid;grid-template-columns:7vmin 1fr;gap:2vmin;align-items:center;
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--kb);
+  border-radius:.9vmin;padding:1.6vmin 2.1vmin}
+.layer.opt{border-left-color:var(--dim);opacity:.72;border-left-style:dashed}
+.layer .id{font-size:2.1vmin;font-weight:800;color:var(--kb)}
+.layer.opt .id{color:var(--dim)}
+.layer .d{font-size:1.8vmin;color:var(--muted);line-height:1.5}
+.layer .d b{color:var(--text)}
+
+/* 2단 (글 + 그림) */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:3vmin;align-items:center;margin-top:1vmin}
+.split.wide-r{grid-template-columns:.85fr 1.15fr}
+/* 밝은 배경 스크린샷을 어두운 덱에 올린다 — 흰 카드로 감싸야 경계가 생긴다 */
+.shot{background:#fff;border-radius:1.2vmin;padding:1.4vmin;overflow:hidden}
+.shot img{display:block;width:100%;height:auto;border-radius:.5vmin}
+.shot.pad2{padding:2vmin}
+.shotcap{font-size:1.5vmin;color:var(--dim);margin-top:1.1vmin;line-height:1.5}
+
+/* 파이프라인 흐름 */
+.flow{display:flex;align-items:stretch;gap:1.4vmin;margin:2vmin 0}
+.step{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:1vmin;
+  padding:1.9vmin 1.7vmin;display:flex;flex-direction:column;gap:.8vmin}
+.step .n{font-size:1.5vmin;color:var(--kb);font-weight:700;letter-spacing:.1em}
+.step .t{font-size:1.9vmin;font-weight:700}
+.step .d{font-size:1.6vmin;color:var(--muted);line-height:1.5}
+.step.warn{border-color:var(--bad)}
+.step.warn .n{color:var(--bad)}
+.chev{display:flex;align-items:center;color:var(--dim);font-size:2.2vmin}
+
+/* 키-값 스펙 목록 */
+.kv{display:grid;grid-template-columns:auto 1fr;gap:1.2vmin 2.2vmin;font-size:1.85vmin;margin-top:1.4vmin}
+.kv dt{color:var(--kb);font-weight:700;white-space:nowrap}
+.kv dd{color:var(--muted);line-height:1.55}
+.kv dd b{color:var(--text)}
+
+/* 수식 블록 */
+.formula{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--kb);
+  border-radius:.9vmin;padding:2.2vmin 2.4vmin;margin:1.8vmin 0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2vmin;line-height:1.85;color:var(--text)}
+.formula .c{color:var(--dim);font-size:1.6vmin}
+
+/* 네비 */
+.bar-top{position:fixed;top:0;left:0;height:3px;background:var(--kb);z-index:99;transition:width .3s}
+.nav{position:fixed;bottom:2.4vmin;right:3vmin;display:flex;align-items:center;gap:1.4vmin;z-index:99}
+.nav button{background:rgba(255,255,255,.07);border:none;color:var(--text);width:3.6vmin;height:3.6vmin;
+  min-width:30px;min-height:30px;border-radius:50%;cursor:pointer;font-size:1.8vmin}
+.nav button:hover{background:rgba(255,188,0,.25)}
+.count{color:var(--dim);font-size:1.7vmin;font-variant-numeric:tabular-nums}
+/* 캡처 모드에서는 네비·진행바를 숨긴다 — 슬라이드 이미지에 UI가 박히면 못 지운다 */
+body.capture .nav,body.capture .bar-top{display:none}
+
+@media(max-width:768px){
+  .cards,.cards.two{grid-template-columns:1fr}
+  .flip{grid-template-columns:1fr;gap:1.6vmin}
+  .arrow{transform:rotate(90deg);text-align:center}
+  .row{grid-template-columns:1fr;gap:.6vmin}
+  .row .rl{text-align:left}
+  .split,.split.wide-r{grid-template-columns:1fr}
+  .flow{flex-direction:column}
+  h1{font-size:9vmin}h2{font-size:6vmin}.lead{font-size:3.4vmin}
+}
+</style>
+</head>
+<body>
+<div class="bar-top" id="bar"></div>
+<div class="deck">
+
+<!-- 1. 표지 -->
+<section class="slide cover active">
+  <div class="anim" style="display:flex;flex-direction:column;height:100%">
+    <div class="mark">KB Future Finance A.I. Challenge 제8회 · 예선 기술설명서</div>
+    <h1>온전<span style="color:var(--muted);font-weight:400">(穩全)</span></h1>
+    <div class="q">"이 집, 위험을 감안하면<br>전세가 월세보다 정말 싼가?"</div>
+    <dl class="meta">
+      <dt>과제명</dt><dd>온전 : 온전한 나의 집을 가질 때까지 (청년 주거 금융 도우미)</dd>
+      <dt>주제</dt><dd>KB국민은행 현직자 Pick — <b>청년 주거</b></dd>
+      <dt>팀명</dt><dd><span class="blankfill">&nbsp;</span></dd>
+      <dt>팀원</dt><dd><span class="blankfill">&nbsp;</span> <span class="blankfill">&nbsp;</span></dd>
+      <dt>소속</dt><dd><span class="blankfill">&nbsp;</span></dd>
+    </dl>
+    <div class="foot">등기부등본 한 장으로 이 질문에 원(₩)으로 답합니다. 추천하지 않고 계산합니다. &nbsp;|&nbsp; 2026. 08.</div>
+  </div>
+</section>
+
+<!-- 2. 한 장 요약 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">한 장 요약</div>
+    <h2>정성 등급을 원(₩)으로 바꾸면<br>결론이 뒤집힙니다</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="t">무엇을</div>
+        <div class="d">등기부등본 <b>한 장 + 소득·자산 몇 줄</b>이 입력. 출력은 셋 —
+        <b>혜택 매칭(미자격 반증 포함)</b>, <b>보증금 미회수 기대손실</b>, <b>전세 대 월세 실질 연비용 차이</b>.</div>
+      </div>
+      <div class="card">
+        <div class="t">어떻게</div>
+        <div class="d">5계층. 숫자와 판정은 <b>전부 결정론 코드</b>가 만들고 LLM은 문서 이해와 서술만 합니다.
+        L4(LLM)는 <b>꺼도 제품이 그대로 돕니다.</b></div>
+      </div>
+      <div class="card on">
+        <div class="t hl">증거</div>
+        <div class="d">실측 1건에서 혜택만 보면 전세가 <b>연 29만원 싸고</b>, 기대손실을 얹으면
+        <b class="hl">연 413만원 비쌉니다.</b> 테스트 <b>573개</b>가 이 계산을 고정합니다.</div>
+      </div>
+    </div>
+    <div class="note">
+      실측 조건은 관악구 빌라·전용 40㎡·전세 2억 대 월세(보증금 2,000만 + 월 55만)·선순위 채권최고액 1.2억·4년 거주,
+      만 27세·월소득 280만·자산 2,000만·중소기업 재직·무주택 세대주입니다. 2026-08-02 배포 경로 실행값이고 같은 입력에 같은 답이 나옵니다.
+    </div>
+  </div>
+</section>
+
+<!-- 3. 지금 청년이 선 자리 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">지금 청년이 서 있는 자리</div>
+    <h2>전세와 월세가 동률이 됐습니다</h2>
+    <div class="tenure">
+      <div class="ten">
+        <div class="bars">
+          <div class="bar b22" style="height:76%"><span>21.5%</span></div>
+          <div class="bar b24" style="height:84%"><span>23.8%</span></div>
+        </div>
+        <div class="lab">전세</div>
+      </div>
+      <div class="ten">
+        <div class="bars">
+          <div class="bar b22" style="height:67%"><span>19.0%</span></div>
+          <div class="bar b24" style="height:84%"><span>23.8%</span></div>
+        </div>
+        <div class="lab">월세</div>
+      </div>
+      <div class="ten" style="flex:2;justify-content:center;text-align:left">
+        <p class="lead" style="font-size:2.2vmin">2022년엔 전세가 앞섰는데 2년 만에 월세가 따라잡았습니다.<br><br>
+        한쪽이 압도적이면 고민할 일도 없습니다. <b>둘이 같다는 건 지금 이 순간 가장 많은 청년이 실제로 저울질하고 있다는 뜻</b>입니다.</p>
+      </div>
+    </div>
+    <div class="note">어두운 막대 2022년 · 노란 막대 2024년 &nbsp;|&nbsp; 국무조정실 『청년의 삶 실태조사』, 만 19~34세 약 15,000가구</div>
+  </div>
+</section>
+
+<!-- 4. 문제 A -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">문제 A — 혜택</div>
+    <h2>정책이 없어서 생긴 문제가 아닙니다</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="t">2023년 3월<br>정책 101개</div>
+        <div class="d">정부와 수도권 3개 지자체. 나이 기준이 다르고, 소득 기준이 다르고, 부모 소득을 보는 곳과 안 보는 곳이 갈렸습니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">2023년 8월<br>193개 → 10개</div>
+        <div class="d">정부가 직접 정리했습니다. 마이홈 앱에 청년전용 페이지도 생겼고요. <b>목록을 모으는 일은 이렇게 끝났습니다.</b></div>
+      </div>
+      <div class="card on">
+        <div class="t">남은 것<br>환산</div>
+        <div class="d">자격이 되는지는 조회할 수 있지만 <b class="hl">"그래서 얼마"</b>는 나오지 않습니다. 연비용으로 바꾸는 일은 여전히 사용자 몫입니다.</div>
+      </div>
+    </div>
+    <div class="note">가장 필요한 주거정책 1순위는 주택구입자금 대출 31.3%, 전세자금 대출 25.0%. 절반 이상이 "얼마를 빌려 얼마를 갚는가"라는 계산이 필요한 항목입니다.</div>
+  </div>
+</section>
+
+<!-- 5. 문제 B -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">문제 B — 위험</div>
+    <h2>저울의 한쪽에 눈금이 없습니다</h2>
+    <div class="cards two">
+      <div class="card">
+        <div class="t" style="color:var(--muted)">지금</div>
+        <div class="d" style="font-size:2.5vmin;line-height:1.5;color:var(--text)">위험도 &nbsp;<b style="color:var(--kb-deep)">주의</b><br>
+        <span style="color:var(--dim);font-size:1.8vmin">(정성 등급)</span></div>
+        <div class="d" style="margin-top:1vmin">주의하니까 하지 말라는 건지, 주의하면서 하라는 건지 알 수가 없습니다. 그리고 이 등급은 비용에 <b>더할 수가 없습니다.</b></div>
+      </div>
+      <div class="card on">
+        <div class="t hl">온전</div>
+        <div class="d" style="font-size:2.5vmin;line-height:1.5;color:var(--text)">미회수 기대손실<br><b class="hl">연 442만원</b></div>
+        <div class="d" style="margin-top:1vmin">E[Loss] = P(사고) × LGD × 보증금<br>같은 단위가 되는 순간 <b>가계부에 들어갑니다.</b></div>
+      </div>
+    </div>
+    <div class="note">등기부는 이미 공개돼 있습니다. 문제는 거기 적힌 위험이 원으로 바뀌지 않는다는 것입니다.</div>
+  </div>
+</section>
+
+<!-- 6. 공통 뿌리 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">두 문제의 뿌리는 하나</div>
+    <h2>정보가 없어서가 아니라,<br>가계부에 못 들어가서입니다</h2>
+    <div class="cards two" style="margin-top:2vmin">
+      <div class="card">
+        <div class="d" style="font-size:2.1vmin">혜택은 <b>공고문(산문)</b>으로,<br>위험은 <b>등급(정성)</b>으로,<br>비용만 <b>원</b>으로 존재합니다.</div>
+      </div>
+      <div class="card on">
+        <div class="d" style="font-size:2.1vmin">그래서 온전은 <b class="hl">추천기가 아니라 환산기</b>입니다.<br><br>
+        "무엇을 고르세요"가 아니라<br><b>"각각 얼마입니다"</b>.</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:3vmin">
+      <b style="color:var(--text)">추천하지 않는다</b> = 매물을 고르지 않고 주관적 선호를 넣지 않는다. &nbsp;&nbsp;
+      <b style="color:var(--text)">하는 것</b> = 자격을 판정하고, 금리 오름차순·한도 내림차순으로 정렬하고, 미자격이면 어느 조항에서 얼마 초과인지 말한다.
+      정렬 기준이 공개돼 있으니 사용자가 직접 검산할 수 있습니다.
+    </div>
+  </div>
+</section>
+
+<!-- 7. 제품 정의 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">해결 방안</div>
+    <h2>입력은 하나, 출력은 셋</h2>
+    <p class="lead" style="font-size:2.1vmin">등기부 한 장에서 주소·전용면적·용도·채권최고액·권리 제한이 함께 나옵니다.
+    이 다섯 개가 <b>시세 추정과 위험 계산 양쪽의 입력</b>이 됩니다.</p>
+    <table>
+      <tr><th style="width:30%">출력</th><th>답하는 질문</th></tr>
+      <tr><td><b>혜택 매칭 + 미자격 반증</b></td><td>나에게 적용되는 상품은? 안 되면 어느 조항에서 얼마 초과? 차선은?</td></tr>
+      <tr><td><b>위험 측정</b></td><td>이 매물에 적힌 권리 제한은? 보증금 미회수 기대손실은 얼마?</td></tr>
+      <tr class="key"><td><b>비용 간격</b></td><td>정책을 적용한 뒤, 전세와 월세의 실질 연비용 차이는 얼마?</td></tr>
+    </table>
+    <div class="formula">
+      전세 실질비용 = 명목비용(이자 + 기회비용) + <span class="hl">E[Loss]</span><br>
+      <span class="hl">E[Loss]</span> = P(사고) × LGD × 보증금<br>
+      <span class="c">P(사고) = 전세가율·근저당비율·건물유형·낙찰가율로 추정한 연간 사고확률<br>
+      LGD = 1 − (예상낙찰가 − 선순위채권 + 최우선변제) ÷ 보증금</span>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 핵심 실측 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">실측 — 관악구 빌라 · 전용 40㎡ · 전세 2억 · 선순위 1.2억 · 4년 거주</div>
+    <h2>계산하면 결론이 뒤집힙니다</h2>
+    <div class="flip">
+      <div class="state a">
+        <div class="cap">정책 혜택까지만 계산 (이자 + 기회비용 포함)</div>
+        <div class="num">−29<span style="font-size:3vmin">만원</span></div>
+        <div class="sub">전세가 싸다</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="state b">
+        <div class="cap">미회수 기대손실까지 계산</div>
+        <div class="num">+413<span style="font-size:3vmin">만원</span></div>
+        <div class="sub">전세가 비싸다</div>
+      </div>
+    </div>
+    <div class="note">
+      이자와 기회비용만으로는 뒤집히지 않았습니다. <b style="color:var(--text)">기대손실을 얹은 뒤에야 부호가 바뀌었습니다.</b>
+      기존의 "전세대출 이자 대 월세" 프레임으로는 잡히지 않는 역전입니다.
+      (연 단위 · 2026-08-02 배포 경로 실행 · 리스크 모델 <code>risk_model_2026-08</code>)
+    </div>
+  </div>
+</section>
+
+<!-- 9. 항목별 분해 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">결론은 한 줄이 아니라 항목이다</div>
+    <h2>어느 줄이 결론을 만들었는지 보여줍니다</h2>
+    <div class="split wide-r">
+      <table class="tight">
+        <tr><th>항목</th><th class="n">전세</th><th class="n">월세</th></tr>
+        <tr><td>정책대출이자 (1.2%)</td><td class="n">120만원</td><td class="n">—</td></tr>
+        <tr><td>시장대출이자 (3.49%)</td><td class="n">279만원</td><td class="n">—</td></tr>
+        <tr><td>보증금 기회비용 (4.0%)</td><td class="n">80만원</td><td class="n">80만원</td></tr>
+        <tr class="key"><td>미회수 기대손실</td><td class="n">442만원</td><td class="n">—</td></tr>
+        <tr><td>연월세</td><td class="n">—</td><td class="n">660만원</td></tr>
+        <tr><td>월세 세액공제</td><td class="n">—</td><td class="n">−112만원</td></tr>
+        <tr><td>청년월세 특별지원</td><td class="n">—</td><td class="n">−120만원</td></tr>
+        <tr class="key"><td><b>합계</b></td><td class="n"><b>921만원</b></td><td class="n"><b>508만원</b></td></tr>
+      </table>
+      <div>
+        <div class="card on">
+          <div class="t hl">442만원 한 줄이 결론의 전부입니다</div>
+          <div class="d">이 줄을 빼면 전세가 <b>29만원 이깁니다.</b> 그래서 항목을 감추지 않고 전부 펼칩니다 —
+          결론만 보여주면 사용자는 무엇을 의심해야 할지 알 수 없습니다.</div>
+        </div>
+        <div class="formula" style="margin-top:2vmin;font-size:1.75vmin">
+          사고확률 <span class="hl">4.19%</span> × 미회수율 <span class="hl">52.7%</span> × 보증금 <span class="hl">2억원</span><br>
+          &nbsp;&nbsp;= <b>442만원</b> / 년<br>
+          <span class="c">회수 예상액 = 시세 2억 8,991만 × 낙찰가율 74% − 선순위 1억 2,000만<br>
+          시세는 관악구 평당 2,396만원(2026-06) × 전용 40㎡ 추정치</span>
+        </div>
+        <div class="shotcap">적용된 정책상품은 중소기업취업청년 전월세보증금대출(금리 1.2% · 한도 1억)이고,
+        한도를 넘는 8,000만원은 시장금리 3.49%로 계산했습니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 강건성 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">예상 반문 — "범위가 125배면 결론도 범위 아닌가"</div>
+    <h2>밴드 어디를 잡아도 부호가 바뀌지 않습니다</h2>
+    <div class="div-chart">
+      <div class="row">
+        <div class="rl">혜택만<br><span style="font-size:1.45vmin;color:var(--dim)">E[Loss] 제외</span></div>
+        <div class="track"><div class="zero"></div><div class="zlab">0</div>
+          <div class="fill neg" style="width:0.7%"><span class="v">−29만</span></div></div>
+      </div>
+      <div class="row">
+        <div class="rl">밴드 하한<br><span style="font-size:1.45vmin;color:var(--dim)">P=1.16% · 시세 +30%</span></div>
+        <div class="track"><div class="zero"></div>
+          <div class="fill pos" style="width:0.2%"><span class="v">+7만</span></div></div>
+      </div>
+      <div class="row">
+        <div class="rl">점추정<br><span style="font-size:1.45vmin;color:var(--dim)">P=4.19% · LGD 52.7%</span></div>
+        <div class="track"><div class="zero"></div>
+          <div class="fill pos" style="width:8.3%"><span class="v">+413만</span></div></div>
+      </div>
+      <div class="row">
+        <div class="rl">밴드 상한<br><span style="font-size:1.45vmin;color:var(--dim)">P=11.63% · 시세 −30%</span></div>
+        <div class="track"><div class="zero"></div>
+          <div class="fill pos big" style="width:87.9%"><span class="v">+4,385만</span></div></div>
+      </div>
+    </div>
+    <div class="note">
+      기대손실 점추정은 442만원, 밴드는 <b style="color:var(--text)">35만~4,414만원(125배)</b>입니다.
+      사고확률이 공개 통계 4개 시점에서 1.16~11.63%로 움직이고(10배), 시세가 구 평균 추정이라 ±30%가 더 붙어서입니다.
+      <b style="color:var(--text)">가장 낙관적인 가정에서도 전세가 싸지지 않습니다.</b>
+      다만 하한에서는 연 7만원이라 사실상 동률이고, 이건 "전세가 확실히 나쁘다"가 아니라 <b style="color:var(--text)">"혜택만 보고 전세를 고르면 안 된다"</b>는 뜻입니다.
+      다른 매물에서 밴드가 0을 가로지르면 정직한 답은 "모른다"이고, 화면도 그렇게 말합니다.
+    </div>
+  </div>
+</section>
+
+<!-- 11. 시스템 구조 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">시스템 구조</div>
+    <h2>숫자는 AI가 만들지 않습니다</h2>
+    <div class="stack">
+      <div class="layer opt"><div class="id">L0</div><div class="d">룰 파이프라인(오프라인) — 법령·공고 → <b>버전 태그가 붙은 JSON 룰 DB</b>. 추출 LLM과 검증 LLM을 분리하고 사람이 검수합니다</div></div>
+      <div class="layer"><div class="id">L1</div><div class="d"><b>문서 이해</b> — 등기부 PDF를 텍스트로 파싱(pdfplumber), 실패하면 OCR 폴백(tesseract). <b>비전 LLM이 아닙니다</b></div></div>
+      <div class="layer"><div class="id">L2</div><div class="d"><b>리스크 예측</b> — 로지스틱 회귀 P(사고). 공개 통계 920관측·4시점 보정, 추론은 stdlib <code>math.exp</code> 한 줄</div></div>
+      <div class="layer"><div class="id">L3</div><div class="d"><b>계산 엔진 (결정론 · AI 아님, 의도된 설계)</b> — 세후 비용 · E[Loss] · 등기부 등급. <b>테스트 573개로 고정</b></div></div>
+      <div class="layer opt"><div class="id">L4</div><div class="d">에이전트(LLM) — 등급을 한 문단으로 서술. <b>선택 경로라 키가 없어도 화면은 그대로 돕니다</b></div></div>
+    </div>
+    <div class="note">
+      금융에서 숫자가 틀리면 안 되니까 판정과 계산은 전부 결정론 코드가 맡습니다. 실선이 답을 만들고 점선은 있으면 좋은 것입니다.
+      LLM이 곱셈을 하지 않는다는 뜻이지 AI를 안 쓴다는 뜻이 아닙니다 — <b style="color:var(--text)">쓰는 자리를 골랐습니다.</b>
+    </div>
+  </div>
+</section>
+
+<!-- 12. L1 문서 이해 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">L1 — 문서 이해</div>
+    <h2>등기부 한 장에서 다섯 개를 꺼냅니다</h2>
+    <div class="flow">
+      <div class="step"><div class="n">01</div><div class="t">텍스트 파싱</div><div class="d">pdfplumber. 취소선(도형)이 그어진 단어를 <b>텍스트 조립 단계에서</b> 제거합니다 — 말소된 근저당이 유효한 것과 같은 문자열로 섞여 들기 때문입니다</div></div>
+      <div class="chev">›</div>
+      <div class="step"><div class="n">02</div><div class="t">OCR 폴백</div><div class="d">주소·근저당·면적을 하나도 못 건지면 tesseract로 재시도(렌더 배율 3). 도형이 없는 촬영본은 <b>순위번호 참조</b>로 말소를 짚습니다</div></div>
+      <div class="chev">›</div>
+      <div class="step"><div class="n">03</div><div class="t">필드 추출</div><div class="d">주소 · 전용면적 · 용도 · 채권최고액 · 권리 제한. 문서 종류(집합건물/건물)에 따라 <b>읽는 절이 다릅니다</b></div></div>
+      <div class="chev">›</div>
+      <div class="step warn"><div class="n">04</div><div class="t">못 읽으면 비웁니다</div><div class="d">어떤 필드도 예외를 올리지 않고 <b>None + 사유</b>를 남깁니다. 예외로 올리면 잘 읽힌 필드까지 통째로 버려집니다</div></div>
+    </div>
+    <div class="note">
+      <b style="color:var(--text)">모르면 계산하지 않습니다.</b> 시세나 선순위를 못 읽으면 기대손실을 0으로 두지 않습니다 —
+      0은 화면에서 "위험 없음"으로 읽히니까요. 전용면적을 특정하지 못하면 자동으로 채우지 않고, 서울 밖은 계산 자체를 막습니다.
+      근거가 반쪽인 결론을 내느니 입구에서 거절하는 쪽을 택했습니다.
+    </div>
+  </div>
+</section>
+
+<!-- 13. L1 실물 검증 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">L1 — 왜 실물 발급본으로 검증했나</div>
+    <h2>픽스처가 실제 형식과 다르면<br>테스트는 아무것도 보증하지 않습니다</h2>
+    <table class="tight">
+      <tr><th style="width:34%">합성 픽스처가 놓친 것</th><th>실물에서 드러난 결과</th></tr>
+      <tr><td><b>'주요 등기사항 요약' 절</b><br><span style="color:var(--dim)">가짜 등기부엔 이 절이 없었다</span></td>
+          <td>발급본이 을구의 유효 근저당을 되풀이해서 <b>채권최고액이 2배</b>가 됐고, LGD가 1.0에 고정됐습니다. 테스트 12개가 통과하는 내내 살아 있던 결함입니다</td></tr>
+      <tr><td><b>집합건물의 전용면적 위치</b><br><span style="color:var(--dim)">실물은 '전용면적'이라는 낱말을 찍지 않는다</span></td>
+          <td>같은 문서의 다른 ㎡가 4개(전유부분·층별·대지면적·대지권비율). 절을 구분하지 않으면 대지면적을 집어 <b>정답의 9.8배</b> → 시세 과대 → 기대손실 과소평가</td></tr>
+      <tr><td><b>표 옆 칸이 같은 줄에 섞임</b></td>
+          <td>도로명주소가 <b>3건 중 3건</b> 틀렸습니다('공릉로 1층 45.29㎡'의 1을 번지로 집음). 주소 모양 토큰만 골라 잇도록 교체했습니다</td></tr>
+      <tr class="key"><td><b>현재</b></td>
+          <td>실물 발급본 <b>3건</b>(건물 2 · 집합건물 1)에 테스트 <b>31개</b>를 걸어 주소·전용면적·채권최고액·용도·층·호수·말소 처리를 사람이 원문과 대조한 정답으로 고정합니다</td></tr>
+    </table>
+    <div class="note">
+      발급본은 개인정보라 저장소에 넣지 않습니다 — 파일이 있으면 31개가 돌고, 없으면 skip합니다.
+      남은 것은 유형 커버리지입니다: <b style="color:var(--text)">스캔·촬영본과 아파트·오피스텔 실물이 아직 없어서</b> 그 두 경로는 합성 픽스처가 근거입니다. 숨기지 않고 적습니다.
+    </div>
+  </div>
+</section>
+
+<!-- 14. L2 리스크 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">L2 — 리스크 예측</div>
+    <h2>학습이 아니라 공개 통계 보정입니다</h2>
+    <div class="split">
+      <div>
+        <dl class="kv">
+          <dt>모델</dt><dd>로지스틱 회귀. 피처는 <b>전세가율 · 근저당비율 · 건물유형 · 낙찰가율</b></dd>
+          <dt>보정 원본</dt><dd>한국부동산원 부동산테크 임대차 시장정보(국토교통부 공동).
+            <b>시군구 × 주택유형 920개 관측치</b>, 4개 시점(2024-06 · 2025-01 · 2025-06 · 2026-06)</dd>
+          <dt>방법</dt><dd><b>집계 마진 보정</b>입니다. 개별 사고 레이블이 공개되지 않아 학습을 하지 않았습니다</dd>
+          <dt>추론</dt><dd>계수를 룰 JSON(<code>risk_model_2026-08</code>)으로 빼서 <b>stdlib만으로</b> 계산합니다.
+            컨테이너 런타임에 numpy·pandas·sklearn이 없어서 학습 라이브러리를 추론 경로에 두지 않았습니다</dd>
+          <dt>출력</dt><dd>P(사고) 점추정 + <b>계수 기반 기여도</b> + 4시점 범위</dd>
+        </dl>
+      </div>
+      <div>
+        <div class="card on">
+          <div class="t">왜 점추정만 내지 않는가</div>
+          <div class="d">시군구 집계로 개별 매물을 추정하니 <b>생태학적 오류</b>의 위험이 있습니다.
+          같은 계산을 4개 시점 계수로 각각 돌리면 P가 <b>1.16%에서 11.63%까지</b> 움직입니다.
+          점추정 하나만 내면 "어느 시점 기준이냐"가 숨습니다.</div>
+        </div>
+        <div class="card" style="margin-top:2vmin">
+          <div class="t">계수를 다시 보정하면</div>
+          <div class="d">이 문서의 숫자가 통째로 바뀝니다. 그래서 룰에 <b>버전 태그</b>를 달고
+          모든 실측값에 <b>어느 룰 버전으로 뽑았는지</b>를 함께 적습니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 15. L3 계산 엔진 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">L3 — 결정론 계산 엔진</div>
+    <h2>여기가 제품의 심장이고,<br>AI가 아닌 것이 설계입니다</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="t">순수 함수 + 단위 테스트</div>
+        <div class="d">세후 비용 · E[Loss] · 등기부 등급이 전부 입력→출력이 고정된 순수 함수입니다.
+        같은 입력에 같은 출력이 나오니 <b>사용자가 검산할 수 있습니다.</b></div>
+      </div>
+      <div class="card">
+        <div class="t">세율은 구간표로만</div>
+        <div class="d">단일 요율은 어느 구간에서든 <b>조용히</b> 틀립니다. 취득세를 "6억 이하 1.1%" 하나로 두면
+        7억에서 연 128만원이 어긋나는데 예외도 경고도 나지 않습니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">금액은 원(₩) 정수</div>
+        <div class="d">만원 변환은 표시 계층에서만 합니다. 평당가가 만원 단위인 것을 놓치면
+        LGD가 <b>1.0에 고정</b>되고 기대손실이 5.8배로 튀는데, 그럴듯한 큰 숫자만 나와서 눈으로는 못 잡습니다.</div>
+      </div>
+    </div>
+    <div class="note">
+      위험의 정의는 <b style="color:var(--text)">한 곳에만</b> 둡니다(<code>l3/risk.py</code>). 등기부에 <b>적힌</b> 권리 제한 등급은
+      다른 축(<code>l3/register_risk.py</code>)이라 분리했습니다 — 권리 제한이 없어도(🟢) 전세가율이 높으면 기대손실은 큽니다.
+      섞으면 위험의 두 번째 정의가 생기고, 두 숫자가 갈라지는 순간 어느 쪽도 못 믿게 됩니다.
+    </div>
+  </div>
+</section>
+
+<!-- 16. 인용과 룰 DB -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">L0 — 룰은 코드가 아니라 데이터</div>
+    <h2>모든 판정에 원문이 따라붙습니다</h2>
+    <div class="split wide-r">
+      <div>
+        <dl class="kv">
+          <dt>버전 태그</dt><dd>세법·자격요건은 <code>tax_rules_2026-07.json</code>처럼 <b>YYYY-MM</b>을 파일명에 답니다. "2026년 ○월 기준" 명기가 필수입니다</dd>
+          <dt>원문 인용</dt><dd>상품마다 <code>clause_refs</code> · <code>url</code> · <code>note</code>가 붙어 화면 인용으로 그대로 나갑니다</dd>
+          <dt>별표 함정</dt><dd>요율은 조문이 아니라 <b>별표</b>에 있습니다. 공인중개사법 시행규칙 §20①은 "별표 1과 같으며"라고만 하고 숫자가 없어서, 조문만 받으면 요율을 2차 출처에서 베끼게 됩니다</dd>
+          <dt>판단값 표시</dt><dd>실측하지 못한 값은 룰 JSON에 <code>judgment: true</code>와 <b>오차 방향</b>을 함께 적습니다. 어느 쪽으로 틀릴 수 있는지 모르면 밴드를 넓게 둡니다</dd>
+        </dl>
+      </div>
+      <div class="card on">
+        <div class="t hl">미자격 반증</div>
+        <div class="d">자격이 안 될 때 "해당 없음"으로 끝내지 않습니다.
+        <b>어느 조항에서 얼마가 초과됐는지</b>와 차선책을 함께 냅니다.<br><br>
+        이게 없으면 사용자는 무엇을 바꿔야 자격이 생기는지 알 수 없고, 서비스는 다시 "직접 알아보세요"가 됩니다.<br><br>
+        현재 상품 룰 <b>7종</b> — 청년전세·월세지원·청년미래적금, 중기청, 신혼, 디딤돌, KB 자체 상품.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17. 데이터 출처 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">데이터</div>
+    <h2>어디서 와서 언제 갱신되는지 적습니다</h2>
+    <table class="tight">
+      <tr><th>데이터</th><th>출처</th><th>수집</th><th>주기</th></tr>
+      <tr><td><b>시세(실거래가)</b></td><td>국토교통부 실거래가 API (공공데이터포털)</td><td>REST API</td><td>온디맨드</td></tr>
+      <tr><td><b>낙찰가율</b></td><td>법원경매정보 지역·유형별 통계</td><td>공개 API 없음 → 통계표 수동 수집</td><td>월 1회</td></tr>
+      <tr><td><b>세제·정책상품</b></td><td>국가법령정보센터(조문·<b>별표</b>) · 기금e든든 · 주택도시기금</td><td>API 수신 후 <b>사람 검수</b></td><td>공고 변경 시</td></tr>
+      <tr><td><b>등기부등본</b></td><td>인터넷등기소 (열람 700원/건, 실시간 API 부재)</td><td><b>사용자 업로드</b></td><td>요청 시</td></tr>
+      <tr><td><b>P(사고) 계수</b></td><td>한국부동산원 부동산테크 임대차 시장정보</td><td>시군구 집계표 → 마진 보정</td><td>통계 갱신 시</td></tr>
+      <tr class="key"><td><b>금리</b></td><td>주택금융공사 공개 API · 금융감독원 Finlife 공시금리</td><td>API 2종 <b>교차검증</b></td><td>공시 갱신 시</td></tr>
+    </table>
+    <div class="note">
+      모든 데이터에 <b style="color:var(--text)">조회 기준일을 함께 저장</b>합니다. 화면의 숫자가 언제 것인지 말할 수 없으면 그 숫자는 근거가 아니라 주장입니다.
+      등기부에 실시간 API가 없다는 제약이 곧 제품 형태를 정했습니다 — 자동 조회가 아니라 <b style="color:var(--text)">사용자가 올린 한 장</b>에서 최대한을 꺼냅니다.
+    </div>
+  </div>
+</section>
+
+<!-- 18. 화면 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">구현된 화면</div>
+    <h2>결론 · 근거 · 동네를 한 화면에서</h2>
+    <div class="split">
+      <div>
+        <div class="shot pad2"><img src="../screenshots/04-map.png" alt="동네 시세 지도 — 동별 버블"></div>
+        <div class="shotcap">동별 시세 버블. 공개 GeoJSON은 <b style="color:var(--text)">행정동</b>이고 실거래는 <b style="color:var(--text)">법정동</b>이라
+        폴리곤 대신 버블로 갔습니다. 경계를 억지로 맞추면 없는 정밀도를 주장하게 됩니다.</div>
+      </div>
+      <div>
+        <dl class="kv">
+          <dt>배포 프론트</dt><dd>React + Vite + ECharts — 시세 추이 차트 · 동네 지도 · 조건 진단</dd>
+          <dt>API</dt><dd>FastAPI. 시세 / 지도 / 등기부 / 의사결정 4개 엔드포인트를 <b>한 포트에서</b> 프론트까지 함께 서빙합니다</dd>
+          <dt>업로드</dt><dd>PDF 파싱은 CPU 작업이라 <b>이벤트 루프에서 내렸습니다</b> — 동기 처리로 두면 업로드 한 건이 서버를 멈춥니다(실측 41.5배 지연)</dd>
+          <dt>공개 배포</dt><dd><code>READONLY</code> 모드로 캐시만 읽습니다. 1요청이 국토부 API를 최대 183회 호출해서, 공개 경로가 키 쿼터를 소진시킬 수 있습니다</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 19. 검증 현황 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">검증</div>
+    <h2>테스트 573개가 무엇을 고정하는가</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="t">계산의 경계</div>
+        <div class="d">구간표 세율(구간 경계에서 어긋나는지) · <b>단위 경계(만원과 원)</b> · 정책 룰 필드가 조용히 사라지지 않는지.
+        전부 <b>눈으로는 안 잡히고 예외도 안 나는</b> 종류의 결함입니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">등기부 파싱 4경로</div>
+        <div class="d">집합건물 · 건물 · 말소 처리 · OCR. 이 중 앞의 셋은 <b>실물 발급본 3건</b>에 31개 테스트로 고정돼 있습니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">배포 경로 3종</div>
+        <div class="d">로컬 터널 · Hugging Face Spaces · Render. 의존성이 2벌이라
+        <b>컨테이너에서 import가 되는지</b>를 따로 확인합니다.</div>
+      </div>
+    </div>
+    <div class="note">
+      테스트 수는 자랑이 아니라 <b style="color:var(--text)">회귀 방지선</b>입니다. 이 프로젝트에서 실제로 밟은 결함 13종을 문서에 기록해 뒀고,
+      그중 다수가 "테스트가 통과하는 내내 살아 있던" 종류였습니다 — 픽스처가 실물과 달랐기 때문입니다.
+      그래서 실물 발급본 검증을 <b style="color:var(--text)">별도 경로</b>로 유지합니다.
+    </div>
+  </div>
+</section>
+
+<!-- 20. 경쟁 대비 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">차별점</div>
+    <h2>아무도 채우지 않은 세 칸</h2>
+    <table>
+      <tr><th style="width:30%">기능</th><th style="text-align:center">공공포털</th><th style="text-align:center">안심전세앱</th><th style="text-align:center">프롭테크</th><th style="text-align:center">핀테크</th><th style="text-align:center;color:var(--kb)">온전</th></tr>
+      <tr><td>정책 목록·자격 진단</td><td style="text-align:center">있음</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td style="text-align:center">부분</td><td style="text-align:center;color:var(--kb)">있음</td></tr>
+      <tr><td>등기부 분석·위험 정보</td><td class="blank" style="text-align:center">—</td><td style="text-align:center">있음</td><td style="text-align:center">있음</td><td class="blank" style="text-align:center">—</td><td style="text-align:center;color:var(--kb)">있음</td></tr>
+      <tr><td>대출 비교·실행</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td style="text-align:center">있음</td><td style="text-align:center;color:var(--kb)">있음</td></tr>
+      <tr class="key"><td>미자격 반증 + 조항 인용</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td style="text-align:center">있음</td></tr>
+      <tr class="key"><td>리스크 ₩ 정량화</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td style="text-align:center">있음</td></tr>
+      <tr class="key"><td>전세 대 월세 세후 비교</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td class="blank" style="text-align:center">—</td><td style="text-align:center">있음</td></tr>
+    </table>
+    <div class="note">
+      경쟁자를 후하게 적었습니다. 그래야 빈 칸이 의미가 있습니다. 마이홈은 "어떤 정책이 있고 자격이 되는가"에,
+      프롭테크는 "이 집이 위험한가"에, 핀테크는 "받을 수 있는 대출이 무엇인가"에 답합니다.
+      그런데 <b style="color:var(--text)">"그래서 이 집을 이 조건으로 계약하면 연 얼마인가"</b>에는 아무도 답하지 않습니다.
+    </div>
+  </div>
+</section>
+
+<!-- 21. KB 연계 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">계산에서 행동까지</div>
+    <h2>KB 연계</h2>
+    <div class="cards">
+      <div class="card on">
+        <div class="t">혜택 대상자</div>
+        <div class="d">어느 상품을 어디서 신청하는지까지. 정책 기금상품의 수탁은행이 KB국민은행이라 영업점·KB스타뱅킹으로 자연스럽게 이어집니다.</div>
+      </div>
+      <div class="card on">
+        <div class="t">혜택 비대상자</div>
+        <div class="d">미자격 반증(어느 조항에서 얼마 초과인지)과 함께 <b>KB 청년 맞춤형 전세자금대출</b>로 연계합니다. 자격 미달이 곧 이탈이 되지 않게 합니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">B2B — KB 내부</div>
+        <div class="d">같은 엔진이 전세대출 심사의 참고지표가 됩니다. 지금 계수는 공개 통계 보정이라 거칠지만,
+        <b>KB 내부 전세대출·보증사고 데이터와 결합하면 정밀도가 바로 올라갑니다.</b></div>
+      </div>
+    </div>
+    <div class="note">
+      측정만 하고 끝내면 다시 사용자 몫으로 돌려주는 셈입니다. 계산에 쓴 시중금리도 익명의 '시장금리'가 아니라
+      <b style="color:var(--text)">KB의 실측 실행금리</b>라는 사실을 밝히고 신청 경로를 엽니다.
+      은행이 이 구조를 보유할 때만 생기는 이득이고, 사고율과 회수손실 절감으로 이어집니다.
+    </div>
+  </div>
+</section>
+
+<!-- 22. 한계 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">숨기지 않습니다</div>
+    <h2>한계</h2>
+    <table class="tight">
+      <tr><td style="width:32%"><b>법률 자문이 아니라 정보 제공입니다</b></td><td>그래서 판정을 결정론화하고 모든 출력에 원문을 인용합니다</td></tr>
+      <tr><td><b>등기부 밖 위험은 못 봅니다</b></td><td>임대인 국세 체납, 미신고 선순위 임차인. 구조적으로 불가능해서 보증보험 가입 유도로 보완합니다</td></tr>
+      <tr><td><b>사고확률 계수가 거칩니다</b></td><td>시군구 집계로 개별 매물을 추정하니 생태학적 오류의 위험이 있습니다. 그래서 점추정 대신 밴드를 냅니다</td></tr>
+      <tr><td><b>시세는 지역 평균 추정치</b></td><td>특정 호실의 시세가 아니고, 집계 단위(지번·동·시군구)에 따라 불확실성 폭도 달라집니다</td></tr>
+      <tr><td><b>현재 범위는 서울 25개 구 · 상품 7종</b></td><td>실거래 캐시와 최우선변제 기준이 서울만 있어서, 그 밖은 <b>계산을 막습니다</b></td></tr>
+      <tr class="key"><td><b>다중주택은 방 면적을 사용자가 넣습니다</b></td><td>등기부에 방 면적이 없는데 그 값이 결론을 바꿉니다 — 같은 문서가 방 20㎡ 기준 기대손실 6,831만원, 건물 연면적 기준 0원입니다. 지금은 보수적인 쪽을 쓰고 경고를 붙입니다</td></tr>
+    </table>
+    <div class="note">한계를 먼저 말하는 것이 이 제품의 기능입니다. 근거 없는 확신을 파는 순간 금융 서비스로서 가치가 0이 됩니다.</div>
+  </div>
+</section>
+
+<!-- 23. 로드맵 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">다음</div>
+    <h2>무엇을 채우면 이 숫자가 단단해지는가</h2>
+    <div class="cards">
+      <div class="card on">
+        <div class="t hl">1순위 — 파싱 유형 커버리지</div>
+        <div class="d">스캔·촬영본과 아파트·오피스텔 <b>실물 발급본</b>을 확보해 OCR 경로와 집합건물 경로를 실물에 고정합니다.
+        파싱이 틀리면 그 위의 모든 숫자가 틀립니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">2순위 — 계수 정밀도</div>
+        <div class="d">지금은 공개 통계 집계 보정이라 밴드가 125배입니다.
+        <b>내부 사고 데이터</b>가 붙으면 개별 매물 단위 추정이 되고 밴드가 좁아집니다. 이게 KB와 함께해야 되는 지점입니다.</div>
+      </div>
+      <div class="card">
+        <div class="t">3순위 — 지역 확장</div>
+        <div class="d">전국으로 넓히려면 실거래 시세 캐시와 주택임대차보호법 시행령의 <b>4개 지역구간</b>을 함께 채워야 합니다.
+        둘 중 하나만으로는 위험이 왜곡됩니다.</div>
+      </div>
+    </div>
+    <div class="note">
+      순서를 이렇게 둔 이유는 <b style="color:var(--text)">아래 단계의 오차가 위 단계를 전부 무의미하게 만들기</b> 때문입니다.
+      계수를 정교하게 다듬어도 전용면적을 잘못 읽으면 결론이 바뀝니다. 그래서 화면을 늘리는 일보다 파싱 정확도를 먼저 둡니다.
+    </div>
+  </div>
+</section>
+
+<!-- 24. 클로징 -->
+<section class="slide cover">
+  <div class="anim" style="display:flex;flex-direction:column;height:100%;justify-content:center">
+    <div class="kicker">온전(穩全)</div>
+    <h1 style="max-width:26ch">혜택을 온전히 받고,<br>온전한 내 집을 갖는 것</h1>
+    <p class="lead" style="margin-top:3.4vmin;font-size:2.6vmin">
+      청년은 인생에서 가장 큰 금융 결정을 가장 적은 정보로 내립니다.<br>
+      온전은 그 결정을 대신하지 않습니다. <b>계산해서 보여줄 뿐입니다.</b>
+    </p>
+    <div class="foot" style="margin-top:5vmin">
+      테스트 573개 통과 · 실물 등기부 3건 고정 · 배포 경로 3종 검증 · 서울 25개 구 · 상품 룰 7종
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="nav">
+  <button onclick="go(cur-1)" aria-label="이전">←</button>
+  <span class="count"><span id="c">1</span> / <span id="t">1</span></span>
+  <button onclick="go(cur+1)" aria-label="다음">→</button>
+</div>
+
+<script>
+const S=[...document.querySelectorAll('.slide')];let cur=1;
+document.getElementById('t').textContent=S.length;
+function go(n){
+  cur=Math.max(1,Math.min(S.length,n));
+  S.forEach((s,i)=>s.classList.toggle('active',i===cur-1));
+  document.getElementById('c').textContent=cur;
+  document.getElementById('bar').style.width=(cur/S.length*100)+'%';
+}
+// ?s=N : 그 슬라이드만 띄우고 UI를 숨긴다 — PNG/PPTX/PDF 빌드가 이 경로를 쓴다.
+const q=new URLSearchParams(location.search);
+if(q.has('s')){document.body.classList.add('capture');go(parseInt(q.get('s'),10)||1);}
+else go(1);
+addEventListener('keydown',e=>{
+  if(['ArrowRight',' ','PageDown'].includes(e.key)){e.preventDefault();go(cur+1)}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(cur-1)}
+  if(e.key==='Home')go(1); if(e.key==='End')go(S.length);
+});
+addEventListener('click',e=>{if(!e.target.closest('.nav'))go(cur+1)});
+</script>
+</body>
+</html>

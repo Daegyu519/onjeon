@@ -18,6 +18,10 @@ dependencies = [
     "pypdfium2>=4.30",
     "pdfplumber>=0.11",
     "fastapi>=0.115",
+    # dev.sh·serve.sh가 `.venv/bin/uvicorn`을 직접 실행한다. 여기 없으면
+    # `pip install -e .`만 한 환경에서 서버가 기동조차 못 한다(제출물 심사 환경이 그렇다).
+    # requirements-api.txt에도 따로 있다 — 컨테이너 경로는 그쪽을 쓴다(CLAUDE.md 함정 5).
+    "uvicorn[standard]>=0.30",
     "python-multipart>=0.0.9",
     "httpx>=0.27",
 ]
@@ -27,6 +31,8 @@ llm = ["google-genai>=1.0", "anthropic>=0.40"]
 rag = ["fastembed>=0.4"]
 xai = ["shap>=0.46"]
 dev = ["pytest>=8.3"]
+# 문서 빌드 전용 — scripts/build_deck.py(덱 → pptx/pdf). 런타임·테스트에는 필요 없다.
+docs = ["python-pptx>=1.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
