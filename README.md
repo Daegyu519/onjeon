@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/FastAPI-0.139-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/React-19_+_Vite_8-61DAFB?logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/ECharts-6-AA344D?logo=apacheecharts&logoColor=white" alt="ECharts" />
-  <img src="https://img.shields.io/badge/tests-567_passed-4C9A2A" alt="tests" />
+  <img src="https://img.shields.io/badge/tests-573_passed-4C9A2A" alt="tests" />
 </p>
 
 <p align="center"><sub>KB Future Finance A.I. Challenge 출품작</sub></p>
@@ -134,7 +134,7 @@ $$E[Loss] = P(사고) \times LGD \times 보증금$$
 | **LLM** | Google Gemini 2.5 Flash (선택 경로) · Anthropic 폴백 |
 | **캐시** | SQLite (WAL) — 국토부 실거래 캐시 |
 | **룰 DB** | 버전 태그 JSON (`YYYY-MM`) — 세제·시장·낙찰가율·금리·상품·등기부권리 |
-| **테스트** | pytest 567개 |
+| **테스트** | pytest 573개 |
 
 ### 데이터 출처
 
@@ -177,7 +177,7 @@ onjeon/
 │   ├── market/               # 시세 집계·지도·캐시
 │   └── rules/                # 버전 태그 룰 JSON (YYYY-MM)
 ├── scripts/                  # 데이터 수집 · 캐시 워밍 · 모델 보정
-├── tests/                    # pytest 567개
+├── tests/                    # pytest 573개
 ├── docs/                     # 문제 정의 · 아키텍처 · 설계 · 데이터 파이프라인
 ├── dev.sh serve.sh tunnel.sh # 개발 / 로컬 프로덕션 / 공개 시연
 └── Dockerfile render.yaml    # 컨테이너 배포 폴백
@@ -251,7 +251,7 @@ cp .env.example .env
 ### 실행
 
 ```bash
-.venv/bin/python -m pytest        # 전체 테스트 567개
+.venv/bin/python -m pytest        # 전체 테스트 573개
 ```
 
 | 목적 | 명령 | 접속 |
@@ -301,7 +301,7 @@ KB국민은행 팔레트 기반. 대비비는 실측값이며 전부 WCAG AA를 
 | 문서 | 내용 | 이런 질문에 답함 |
 |---|---|---|
 | [docs/summary.md](docs/summary.md) | **과제 요약** — 제출·발표용 (150자/400자/전문) | "이 과제가 뭔데?" |
-| [CLAUDE.md](CLAUDE.md) | 프로젝트 원칙·구조·컨벤션 + **실측 함정 12건** | "이 프로젝트의 규칙은?" |
+| [CLAUDE.md](CLAUDE.md) | 프로젝트 원칙·구조·컨벤션 + **실측 함정 13건** | "이 프로젝트의 규칙은?" |
 | [docs/problem.md](docs/problem.md) | 문제 정의 — 가치·경쟁·범위 밖·한계 | "왜 이걸 만드는가? 뭘 안 푸는가?" |
 | [docs/architecture.md](docs/architecture.md) | **as-built** 설계도 — 계층별 실제 구현 | "지금 실제로 어떻게 돌아가는가?" |
 | [docs/design.md](docs/design.md) | 원안(2026-07-19) — 모듈 스펙, 수식, 스키마 | "무엇을 만들 **계획**이었나?" |
