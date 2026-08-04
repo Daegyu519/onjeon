@@ -3,7 +3,7 @@
 > 사분면: Explanation + Reference. **이 문서는 as-built다** — 계획이 아니라 지금 돌아가는 것을 적는다.
 > "무엇을 만들 계획이었나"는 [design.md](design.md), "왜 이 문제인가"는 [problem.md](problem.md),
 > 일정·역할은 [workflow.md](workflow.md).
-> 기준: 2026-08-02 · 테스트 573개 통과 · 배포 경로 3종.
+> 기준: 2026-08-02 · 테스트 576개 통과 · 배포 경로 3종.
 
 ---
 
@@ -130,7 +130,7 @@ sequenceDiagram
 ## 4. 결정론 / LLM 경계 — 어디까지가 코드인가
 
 ```
-┌─ 결정론 (테스트로 고정, 573개) ──────────────────────────────┐
+┌─ 결정론 (테스트로 고정, 576개) ──────────────────────────────┐
 │  파싱  register/parse.py      정규식 + pdfplumber 도형(취소선)  │
 │  등급  l3/register_risk.py    룰 테이블 lookup                 │
 │  확률  l2/model.py            math.exp — 계수는 룰 JSON        │
@@ -229,7 +229,7 @@ uv venv /tmp/api-check && uv pip install -p /tmp/api-check -r requirements-api.t
 
 ## 8. 테스트가 지키는 것
 
-573개. 숫자를 세는 게 목적이 아니라 **무엇을 고정하고 있는지**가 중요하다.
+576개. 숫자를 세는 게 목적이 아니라 **무엇을 고정하고 있는지**가 중요하다.
 
 | 테스트 | 고정하는 것 |
 |---|---|
