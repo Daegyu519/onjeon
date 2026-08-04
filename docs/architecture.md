@@ -269,4 +269,4 @@ uv venv /tmp/api-check && uv pip install -p /tmp/api-check -r requirements-api.t
 - 왜 이 문제인가 · 누구의 문제인가 → [problem.md](problem.md)
 - 원래 계획(모듈 스펙·스키마·화면 초안) → [design.md](design.md)
 - 외부 데이터 출처·수집 스크립트 → [data-pipeline.md](data-pipeline.md)
-- 실측 함정 13건 · 실행 커맨드 → [CLAUDE.md](../CLAUDE.md)
+- 실측 함정 15건 · 실행 커맨드 → [CLAUDE.md](../CLAUDE.md)

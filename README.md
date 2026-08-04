@@ -301,7 +301,7 @@ KB국민은행 팔레트 기반. 대비비는 실측값이며 전부 WCAG AA를 
 | 문서 | 내용 | 이런 질문에 답함 |
 |---|---|---|
 | [docs/summary.md](docs/summary.md) | **과제 요약** — 제출·발표용 (150자/400자/전문) | "이 과제가 뭔데?" |
-| [CLAUDE.md](CLAUDE.md) | 프로젝트 원칙·구조·컨벤션 + **실측 함정 13건** | "이 프로젝트의 규칙은?" |
+| [CLAUDE.md](CLAUDE.md) | 프로젝트 원칙·구조·컨벤션 + **실측 함정 15건** | "이 프로젝트의 규칙은?" |
 | [docs/problem.md](docs/problem.md) | 문제 정의 — 가치·경쟁·범위 밖·한계 | "왜 이걸 만드는가? 뭘 안 푸는가?" |
 | [docs/architecture.md](docs/architecture.md) | **as-built** 설계도 — 계층별 실제 구현 | "지금 실제로 어떻게 돌아가는가?" |
 | [docs/design.md](docs/design.md) | 원안(2026-07-19) — 모듈 스펙, 수식, 스키마 | "무엇을 만들 **계획**이었나?" |

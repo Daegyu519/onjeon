@@ -72,7 +72,6 @@ L4  에이전트 레이어 (LLM) — 해석 문단, what-if 번역기. **전부 
 idea/
 ├── CLAUDE.md            ← 이 파일
 ├── README.md            ← 프로젝트 소개 + 실행 방법
-├── PROMPT.md            ← 세션 이어받기 프롬프트
 ├── TODOS.md             ← 대기 항목 (배경·현재상태·시작점까지 적는다)
 ├── pyproject.toml       ← 개발 의존성 (.venv, Python 3.12, uv 관리)
 ├── requirements-api.txt ← 컨테이너 런타임 최소 의존성 — numpy·pandas·sklearn 없음(함정 참조)
