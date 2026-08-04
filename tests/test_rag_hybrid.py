@@ -82,6 +82,9 @@ class TestDimensionMigration:
 
 class TestEmbedderEnvFallback:
     def test_empty_env_embed_model_falls_back_to_default(self, monkeypatch):
+        # fastembed는 [rag] extra다. 심사 환경은 README대로 [dev]만 깔므로 없다 —
+        # 없는 걸 에러로 내면 "선택 기능 미설치"가 "테스트 실패"로 보인다.
+        pytest.importorskip("fastembed", reason="fastembed 없음 — RAG는 선택 의존성([rag] extra)")
         from onjeon.rag.embedder import FastEmbedEmbedder
 
         monkeypatch.setenv("ONJEON_EMBED_MODEL", "")
