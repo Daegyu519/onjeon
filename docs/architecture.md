@@ -3,7 +3,7 @@
 > 사분면: Explanation + Reference. **이 문서는 as-built다** — 계획이 아니라 지금 돌아가는 것을 적는다.
 > "무엇을 만들 계획이었나"는 [design.md](design.md), "왜 이 문제인가"는 [problem.md](problem.md),
 > 일정·역할은 [workflow.md](workflow.md).
-> 기준: 2026-08-02 · 테스트 567개 통과 · 배포 경로 3종.
+> 기준: 2026-08-02 · 테스트 576개 통과 · 배포 경로 3종.
 
 ---
 
@@ -130,7 +130,7 @@ sequenceDiagram
 ## 4. 결정론 / LLM 경계 — 어디까지가 코드인가
 
 ```
-┌─ 결정론 (테스트로 고정, 567개) ──────────────────────────────┐
+┌─ 결정론 (테스트로 고정, 576개) ──────────────────────────────┐
 │  파싱  register/parse.py      정규식 + pdfplumber 도형(취소선)  │
 │  등급  l3/register_risk.py    룰 테이블 lookup                 │
 │  확률  l2/model.py            math.exp — 계수는 룰 JSON        │
@@ -229,7 +229,7 @@ uv venv /tmp/api-check && uv pip install -p /tmp/api-check -r requirements-api.t
 
 ## 8. 테스트가 지키는 것
 
-567개. 숫자를 세는 게 목적이 아니라 **무엇을 고정하고 있는지**가 중요하다.
+576개. 숫자를 세는 게 목적이 아니라 **무엇을 고정하고 있는지**가 중요하다.
 
 | 테스트 | 고정하는 것 |
 |---|---|
@@ -256,7 +256,7 @@ uv venv /tmp/api-check && uv pip install -p /tmp/api-check -r requirements-api.t
 | 1 | `compare.py`(Streamlit)와 `decision.py`(배포)가 **다른 답을 낼 수 있다** — 전자는 월세 E[Loss]를 0으로 하드코딩 | 연구 경로와 배포 경로의 결론 불일치 | `compare.py`를 걷어내거나 `risk.py`로 통일 |
 | 2 | L0 자동 크롤링 미가동 — 룰 갱신이 수동 | 정책 변경 시 사람이 놓치면 stale | 공고 페이지 해시 비교 + 별표 파서 |
 | 3 | 서울 25개 구만 | 그 밖은 계산 거절 | 시세 캐시 확장 + 시행령 4구간 전부 반영 |
-| 4 | 시세 불확실성 폭(`price_uncertainty_by_level`)이 **판단값** `[확인]` | 밴드 폭의 근거가 약함 | 집계 단위별 실측 분산으로 대체 |
+| 4 | 시세 불확실성 폭(`price_uncertainty_by_level`)이 **판단값** — 룰 JSON에 `judgment: true`와 오차 방향을 적어 뒀다 | 밴드 폭의 근거가 약함. 지금은 넓게(구 단위 ±30%) 둬서 판단을 유보시키는 쪽으로 틀어 놨다 | 집계 단위별 평당가 실측 분산으로 대체 |
 | 5 | 등기부 외 리스크(임대인 국세 체납 등) 미커버 | E[Loss] 과소 가능 | 구조적으로 불가 — 보증보험 유도로 보완, 한계 명시 |
 | 6 | 매수 안이 곁가지 — 보유세·양도 시나리오 미정밀 | 3안 비교의 신뢰도 | 페르소나가 매수를 실제 검토할 때 |
 | 7 | **다중주택 E[Loss]가 면적 입력에 좌우된다** — 방 면적을 넣으면 배당 재원 과소, 연면적을 넣으면 다른 세입자 무시. 실측: 같은 문서가 6,831만원 ↔ 0원 | **결론 부호가 뒤집힌다.** 지금은 보수적인 쪽(방 면적) + 경고 | 두 기준의 밴드로 내거나, 다른 세입자 보증금 총액을 입력받아 `risk.py`의 재원에서 뺀다([TODOS.md](../TODOS.md) 8번) |
@@ -269,4 +269,4 @@ uv venv /tmp/api-check && uv pip install -p /tmp/api-check -r requirements-api.t
 - 왜 이 문제인가 · 누구의 문제인가 → [problem.md](problem.md)
 - 원래 계획(모듈 스펙·스키마·화면 초안) → [design.md](design.md)
 - 외부 데이터 출처·수집 스크립트 → [data-pipeline.md](data-pipeline.md)
-- 실측 함정 12건 · 실행 커맨드 → [CLAUDE.md](../CLAUDE.md)
+- 실측 함정 15건 · 실행 커맨드 → [CLAUDE.md](../CLAUDE.md)

@@ -34,6 +34,13 @@ _MAX_UPLOAD = 20 * 1024 * 1024  # 등기부 PDF 업로드 상한 20MB
 # 캐시는 scripts/warm_cache.py로 미리 채운다. 로컬 개발은 기본값(0)이 편하다.
 _READONLY = os.environ.get("ONJEON_PUBLIC_READONLY", "").strip() in {"1", "true", "yes"}
 
+# 키가 없으면 조회를 시도조차 하지 않는다. 캐시에 없는 달(캐시는 수집 시점까지만 차 있고
+# 날짜가 지나면 최근 달이 계속 빈다)을 채우러 들어갔다가 "MOLIT_API_KEY가 없다"로 400이
+# 나면, 키 없이 캐시로 돌아야 하는 심사·시연 환경에서 시세 화면이 통째로 죽는다.
+# _READONLY와 따로 두는 이유: _READONLY는 공개 배포 자세라 L4 해설(Gemini)까지 끄는데,
+# MOLIT 키가 없는 것과 해설을 끄는 것은 아무 상관이 없다.
+_CAN_FETCH_MOLIT = bool(os.environ.get("MOLIT_API_KEY", "").strip())
+
 
 def get_cache():
     """요청 스코프 캐시 연결(테스트는 dependency_overrides로 교체)."""
@@ -50,7 +57,7 @@ def get_market_trends(region: str, buildingType: str, period: str, cache=Depends
     try:
         return market_trends(region, buildingType, period, cache=cache,
                              queried_at=date.today().isoformat(), dong=dong, jibun=jibun,
-                             allow_fetch=not _READONLY)
+                             allow_fetch=not _READONLY and _CAN_FETCH_MOLIT)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

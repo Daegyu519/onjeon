@@ -1,7 +1,6 @@
 """E[Loss] 배선 — 시세 단위 격리 · 계수 JSON 추론 · 위험 조정 게이트.
 
-배포 경로(api.main → decision)에 미회수 기대손실을 붙이는 부분이다. 계획서
-docs/superpowers/specs/2026-07-27-jeonse-vs-wolse-promotion-design.md §3 참조.
+배포 경로(api.main → decision)에 미회수 기대손실을 붙이는 부분이다.
 
 여기서 지키는 두 가지 불변식:
 1. 평당가는 만원 단위다 — ×10000을 빼먹으면 예외 없이 LGD가 1.0으로 고정된다(결함 G).
