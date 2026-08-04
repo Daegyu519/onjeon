@@ -237,12 +237,12 @@ body.capture .nav,body.capture .bar-top{display:none}
       <div class="card on">
         <div class="t hl">증거</div>
         <div class="d">실측 1건에서 혜택만 보면 전세가 <b>연 29만원 싸고</b>, 기대손실을 얹으면
-        <b class="hl">연 413만원 비쌉니다.</b> 테스트 <b>573개</b>가 이 계산을 고정합니다.</div>
+        <b class="hl">연 414만원 비쌉니다.</b> 이 실행값 자체를 테스트 <b>7개</b>가 고정합니다(전체 576개).</div>
       </div>
     </div>
     <div class="note">
       실측 조건은 관악구 빌라·전용 40㎡·전세 2억 대 월세(보증금 2,000만 + 월 55만)·선순위 채권최고액 1.2억·4년 거주,
-      만 27세·월소득 280만·자산 2,000만·중소기업 재직·무주택 세대주입니다. 2026-08-02 배포 경로 실행값이고 같은 입력에 같은 답이 나옵니다.
+      만 27세·월소득 280만·자산 2,000만·중소기업 재직·무주택 세대주입니다. 2026-08-03 배포 경로 실행값이고 같은 입력에 같은 답이 나옵니다.
     </div>
   </div>
 </section>
@@ -379,14 +379,14 @@ body.capture .nav,body.capture .bar-top{display:none}
       <div class="arrow">→</div>
       <div class="state b">
         <div class="cap">미회수 기대손실까지 계산</div>
-        <div class="num">+413<span style="font-size:3vmin">만원</span></div>
+        <div class="num">+414<span style="font-size:3vmin">만원</span></div>
         <div class="sub">전세가 비싸다</div>
       </div>
     </div>
     <div class="note">
       이자와 기회비용만으로는 뒤집히지 않았습니다. <b style="color:var(--text)">기대손실을 얹은 뒤에야 부호가 바뀌었습니다.</b>
       기존의 "전세대출 이자 대 월세" 프레임으로는 잡히지 않는 역전입니다.
-      (연 단위 · 2026-08-02 배포 경로 실행 · 리스크 모델 <code>risk_model_2026-08</code>)
+      (연 단위 · 2026-08-03 배포 경로 실행 · 리스크 모델 <code>risk_model_2026-08</code>)
     </div>
   </div>
 </section>
@@ -446,16 +446,16 @@ body.capture .nav,body.capture .bar-top{display:none}
       <div class="row">
         <div class="rl">점추정<br><span style="font-size:1.45vmin;color:var(--dim)">P=4.19% · LGD 52.7%</span></div>
         <div class="track"><div class="zero"></div>
-          <div class="fill pos" style="width:8.3%"><span class="v">+413만</span></div></div>
+          <div class="fill pos" style="width:8.3%"><span class="v">+414만</span></div></div>
       </div>
       <div class="row">
         <div class="rl">밴드 상한<br><span style="font-size:1.45vmin;color:var(--dim)">P=11.63% · 시세 −30%</span></div>
         <div class="track"><div class="zero"></div>
-          <div class="fill pos big" style="width:87.9%"><span class="v">+4,385만</span></div></div>
+          <div class="fill pos big" style="width:87.9%"><span class="v">+4,389만</span></div></div>
       </div>
     </div>
     <div class="note">
-      기대손실 점추정은 442만원, 밴드는 <b style="color:var(--text)">35만~4,414만원(125배)</b>입니다.
+      기대손실 점추정은 442만원, 밴드는 <b style="color:var(--text)">35만~4,418만원(125배)</b>입니다.
       사고확률이 공개 통계 4개 시점에서 1.16~11.63%로 움직이고(10배), 시세가 구 평균 추정이라 ±30%가 더 붙어서입니다.
       <b style="color:var(--text)">가장 낙관적인 가정에서도 전세가 싸지지 않습니다.</b>
       다만 하한에서는 연 7만원이라 사실상 동률이고, 이건 "전세가 확실히 나쁘다"가 아니라 <b style="color:var(--text)">"혜택만 보고 전세를 고르면 안 된다"</b>는 뜻입니다.
@@ -473,7 +473,7 @@ body.capture .nav,body.capture .bar-top{display:none}
       <div class="layer opt"><div class="id">L0</div><div class="d">룰 파이프라인(오프라인) — 법령·공고 → <b>버전 태그가 붙은 JSON 룰 DB</b>. 추출 LLM과 검증 LLM을 분리하고 사람이 검수합니다</div></div>
       <div class="layer"><div class="id">L1</div><div class="d"><b>문서 이해</b> — 등기부 PDF를 텍스트로 파싱(pdfplumber), 실패하면 OCR 폴백(tesseract). <b>비전 LLM이 아닙니다</b></div></div>
       <div class="layer"><div class="id">L2</div><div class="d"><b>리스크 예측</b> — 로지스틱 회귀 P(사고). 공개 통계 920관측·4시점 보정, 추론은 stdlib <code>math.exp</code> 한 줄</div></div>
-      <div class="layer"><div class="id">L3</div><div class="d"><b>계산 엔진 (결정론 · AI 아님, 의도된 설계)</b> — 세후 비용 · E[Loss] · 등기부 등급. <b>테스트 573개로 고정</b></div></div>
+      <div class="layer"><div class="id">L3</div><div class="d"><b>계산 엔진 (결정론 · AI 아님, 의도된 설계)</b> — 세후 비용 · E[Loss] · 등기부 등급. <b>전부 순수 함수라 단위 테스트로 고정</b></div></div>
       <div class="layer opt"><div class="id">L4</div><div class="d">에이전트(LLM) — 등급을 한 문단으로 서술. <b>선택 경로라 키가 없어도 화면은 그대로 돕니다</b></div></div>
     </div>
     <div class="note">
@@ -522,8 +522,9 @@ body.capture .nav,body.capture .bar-top{display:none}
           <td>실물 발급본 <b>3건</b>(건물 2 · 집합건물 1)에 테스트 <b>31개</b>를 걸어 주소·전용면적·채권최고액·용도·층·호수·말소 처리를 사람이 원문과 대조한 정답으로 고정합니다</td></tr>
     </table>
     <div class="note">
-      발급본은 개인정보라 저장소에 넣지 않습니다 — 파일이 있으면 31개가 돌고, 없으면 skip합니다.
-      남은 것은 유형 커버리지입니다: <b style="color:var(--text)">스캔·촬영본과 아파트·오피스텔 실물이 아직 없어서</b> 그 두 경로는 합성 픽스처가 근거입니다. 숨기지 않고 적습니다.
+      발급본은 개인정보라 저장소에 넣지 않습니다 — 파일이 있으면 31개가 돌고, 없으면 건너뜁니다.
+      실물과 별개로 서울 각 구·주택유형을 덮는 <b style="color:var(--text)">합성 픽스처 27건</b>을 함께 유지합니다.
+      실물은 형식의 함정을, 합성은 유형의 폭을 맡습니다.
     </div>
   </div>
 </section>
@@ -638,11 +639,38 @@ body.capture .nav,body.capture .bar-top{display:none}
   </div>
 </section>
 
-<!-- 18. 화면 -->
+<!-- 18. 제품 화면 — 앞의 숫자가 나온 자리 -->
 <section class="slide">
   <div class="anim">
-    <div class="kicker">구현된 화면</div>
-    <h2>결론 · 근거 · 동네를 한 화면에서</h2>
+    <div class="kicker">구현된 화면 — 앞의 숫자가 나온 자리</div>
+    <h2>이 문서의 숫자는 화면을 옮겨 적은 것입니다</h2>
+    <!-- 두 캡처의 비율이 달라서 세로 가운데 정렬로 두면 캡션 줄이 어긋난다 -->
+    <div class="split" style="align-items:start">
+      <div>
+        <div class="shot"><img src="../screenshots/01-answer.png" alt="전세가 월세보다 연 414만원 비싸요 — 전세 921만원 대 월세 508만원 누적 바"></div>
+        <div class="shotcap"><b style="color:var(--text)">결론.</b> 슬라이드 8의 +414만원이 이 화면입니다.
+        빗금은 혜택으로 깎인 만큼 — 깎인 뒤에도 전세가 위입니다.</div>
+      </div>
+      <div>
+        <div class="shot"><img src="../screenshots/03-evidence.png" alt="미회수 기대손실 근거 — 사고확률 4.19% × 미회수율 52.7% × 보증금 2억 = 442만원, 범위 35만~4,418만원"></div>
+        <div class="shotcap"><b style="color:var(--text)">근거.</b> 곱한 값 세 개와 시세 출처(관악구 평당 2,396만원 · 2026-06)가
+        결론과 같은 화면에 있습니다. 밴드도 접어 두지 않습니다.</div>
+      </div>
+    </div>
+    <div class="note">
+      "화면을 옮겨 적었다"는 말은 그 자체로는 증거가 아니라서, <b style="color:var(--text)">웹이 실제로 보내는 요청 본문을
+      그대로 POST해 이 문서의 숫자와 대조하는 테스트</b>를 걸어 뒀습니다.
+      이 문서의 헤드라인 수치는 <b style="color:var(--text)">테스트 7개</b>로 배포 경로 실행값에 묶여 있어서,
+      계산이 바뀌면 문서가 아니라 <b style="color:var(--text)">테스트가 먼저 깨집니다.</b>
+    </div>
+  </div>
+</section>
+
+<!-- 19. 화면 — 동네와 기술 스택 -->
+<section class="slide">
+  <div class="anim">
+    <div class="kicker">구현 — 화면과 서버</div>
+    <h2>시세는 이 집이 아니라 동네에서 옵니다</h2>
     <div class="split">
       <div>
         <div class="shot pad2"><img src="../screenshots/04-map.png" alt="동네 시세 지도 — 동별 버블"></div>
@@ -661,11 +689,11 @@ body.capture .nav,body.capture .bar-top{display:none}
   </div>
 </section>
 
-<!-- 19. 검증 현황 -->
+<!-- 20. 검증 현황 -->
 <section class="slide">
   <div class="anim">
     <div class="kicker">검증</div>
-    <h2>테스트 573개가 무엇을 고정하는가</h2>
+    <h2>테스트 576개가 무엇을 고정하는가</h2>
     <div class="cards">
       <div class="card">
         <div class="t">계산의 경계</div>
@@ -683,14 +711,14 @@ body.capture .nav,body.capture .bar-top{display:none}
       </div>
     </div>
     <div class="note">
-      테스트 수는 자랑이 아니라 <b style="color:var(--text)">회귀 방지선</b>입니다. 이 프로젝트에서 실제로 밟은 결함 13종을 문서에 기록해 뒀고,
-      그중 다수가 "테스트가 통과하는 내내 살아 있던" 종류였습니다 — 픽스처가 실물과 달랐기 때문입니다.
+      테스트 수는 자랑이 아니라 <b style="color:var(--text)">회귀 방지선</b>입니다. 개발 중 실제로 밟은 결함 15종을 하나씩 테스트로 되받아 두었고,
+      그중 다수가 <b style="color:var(--text)">"테스트가 통과하는 내내 살아 있던"</b> 종류였습니다 — 픽스처가 실물과 달랐기 때문입니다.
       그래서 실물 발급본 검증을 <b style="color:var(--text)">별도 경로</b>로 유지합니다.
     </div>
   </div>
 </section>
 
-<!-- 20. 경쟁 대비 -->
+<!-- 21. 경쟁 대비 -->
 <section class="slide">
   <div class="anim">
     <div class="kicker">차별점</div>
@@ -712,7 +740,7 @@ body.capture .nav,body.capture .bar-top{display:none}
   </div>
 </section>
 
-<!-- 21. KB 연계 -->
+<!-- 22. KB 연계 -->
 <section class="slide">
   <div class="anim">
     <div class="kicker">계산에서 행동까지</div>
@@ -728,8 +756,8 @@ body.capture .nav,body.capture .bar-top{display:none}
       </div>
       <div class="card">
         <div class="t">B2B — KB 내부</div>
-        <div class="d">같은 엔진이 전세대출 심사의 참고지표가 됩니다. 지금 계수는 공개 통계 보정이라 거칠지만,
-        <b>KB 내부 전세대출·보증사고 데이터와 결합하면 정밀도가 바로 올라갑니다.</b></div>
+        <div class="d">같은 엔진이 전세대출 심사의 참고지표가 됩니다. 계수는 공개 통계로 보정해 두었고,
+        <b>KB 내부 전세대출·보증사고 데이터와 결합하면 개별 매물 단위까지 정밀도가 올라갑니다.</b></div>
       </div>
     </div>
     <div class="note">
@@ -740,49 +768,20 @@ body.capture .nav,body.capture .bar-top{display:none}
   </div>
 </section>
 
-<!-- 22. 한계 -->
+<!-- 23. 적용 범위와 전제 -->
 <section class="slide">
   <div class="anim">
-    <div class="kicker">숨기지 않습니다</div>
-    <h2>한계</h2>
+    <div class="kicker">적용 범위</div>
+    <h2>어디까지 답하는지를<br>화면에 함께 적습니다</h2>
     <table class="tight">
       <tr><td style="width:32%"><b>법률 자문이 아니라 정보 제공입니다</b></td><td>그래서 판정을 결정론화하고 모든 출력에 원문을 인용합니다</td></tr>
-      <tr><td><b>등기부 밖 위험은 못 봅니다</b></td><td>임대인 국세 체납, 미신고 선순위 임차인. 구조적으로 불가능해서 보증보험 가입 유도로 보완합니다</td></tr>
-      <tr><td><b>사고확률 계수가 거칩니다</b></td><td>시군구 집계로 개별 매물을 추정하니 생태학적 오류의 위험이 있습니다. 그래서 점추정 대신 밴드를 냅니다</td></tr>
-      <tr><td><b>시세는 지역 평균 추정치</b></td><td>특정 호실의 시세가 아니고, 집계 단위(지번·동·시군구)에 따라 불확실성 폭도 달라집니다</td></tr>
-      <tr><td><b>현재 범위는 서울 25개 구 · 상품 7종</b></td><td>실거래 캐시와 최우선변제 기준이 서울만 있어서, 그 밖은 <b>계산을 막습니다</b></td></tr>
-      <tr class="key"><td><b>다중주택은 방 면적을 사용자가 넣습니다</b></td><td>등기부에 방 면적이 없는데 그 값이 결론을 바꿉니다 — 같은 문서가 방 20㎡ 기준 기대손실 6,831만원, 건물 연면적 기준 0원입니다. 지금은 보수적인 쪽을 쓰고 경고를 붙입니다</td></tr>
+      <tr><td><b>판정 근거는 등기부에 적힌 사실</b></td><td>임대인 국세 체납·미신고 선순위 임차인은 어떤 문서에도 없습니다. 이 구간은 보증보험 가입 유도로 덮습니다</td></tr>
+      <tr><td><b>사고확률은 점추정과 밴드를 함께</b></td><td>시군구 집계로 개별 매물을 추정하는 구조라, 4개 시점 계수로 각각 돌린 범위를 항상 같이 냅니다</td></tr>
+      <tr><td><b>시세는 지역 평균 추정치</b></td><td>특정 호실의 시세가 아니고, 집계 단위(지번·동·시군구)에 따라 불확실성 폭도 함께 표시합니다</td></tr>
+      <tr><td><b>적용 범위는 서울 25개 구 · 상품 7종</b></td><td>실거래 캐시와 최우선변제 기준이 덮는 범위와 정확히 같습니다. 그 밖은 <b>계산을 막습니다</b></td></tr>
+      <tr class="key"><td><b>다중주택은 방 면적을 사용자가 넣습니다</b></td><td>등기부에 방 면적이 없는데 그 값이 결론을 바꿉니다 — 같은 문서가 방 20㎡ 기준 기대손실 6,831만원, 건물 연면적 기준 0원입니다. 보수적인 쪽을 쓰고 경고를 붙입니다</td></tr>
     </table>
-    <div class="note">한계를 먼저 말하는 것이 이 제품의 기능입니다. 근거 없는 확신을 파는 순간 금융 서비스로서 가치가 0이 됩니다.</div>
-  </div>
-</section>
-
-<!-- 23. 로드맵 -->
-<section class="slide">
-  <div class="anim">
-    <div class="kicker">다음</div>
-    <h2>무엇을 채우면 이 숫자가 단단해지는가</h2>
-    <div class="cards">
-      <div class="card on">
-        <div class="t hl">1순위 — 파싱 유형 커버리지</div>
-        <div class="d">스캔·촬영본과 아파트·오피스텔 <b>실물 발급본</b>을 확보해 OCR 경로와 집합건물 경로를 실물에 고정합니다.
-        파싱이 틀리면 그 위의 모든 숫자가 틀립니다.</div>
-      </div>
-      <div class="card">
-        <div class="t">2순위 — 계수 정밀도</div>
-        <div class="d">지금은 공개 통계 집계 보정이라 밴드가 125배입니다.
-        <b>내부 사고 데이터</b>가 붙으면 개별 매물 단위 추정이 되고 밴드가 좁아집니다. 이게 KB와 함께해야 되는 지점입니다.</div>
-      </div>
-      <div class="card">
-        <div class="t">3순위 — 지역 확장</div>
-        <div class="d">전국으로 넓히려면 실거래 시세 캐시와 주택임대차보호법 시행령의 <b>4개 지역구간</b>을 함께 채워야 합니다.
-        둘 중 하나만으로는 위험이 왜곡됩니다.</div>
-      </div>
-    </div>
-    <div class="note">
-      순서를 이렇게 둔 이유는 <b style="color:var(--text)">아래 단계의 오차가 위 단계를 전부 무의미하게 만들기</b> 때문입니다.
-      계수를 정교하게 다듬어도 전용면적을 잘못 읽으면 결론이 바뀝니다. 그래서 화면을 늘리는 일보다 파싱 정확도를 먼저 둡니다.
-    </div>
+    <div class="note">전제를 숫자 옆에 붙여 두는 것이 이 제품의 기능입니다. 근거 없는 확신을 파는 순간 금융 서비스로서 가치가 0이 됩니다.</div>
   </div>
 </section>
 
@@ -796,7 +795,7 @@ body.capture .nav,body.capture .bar-top{display:none}
       온전은 그 결정을 대신하지 않습니다. <b>계산해서 보여줄 뿐입니다.</b>
     </p>
     <div class="foot" style="margin-top:5vmin">
-      테스트 573개 통과 · 실물 등기부 3건 고정 · 배포 경로 3종 검증 · 서울 25개 구 · 상품 룰 7종
+      테스트 576개 통과 · 실물 등기부 3건 고정 · 배포 경로 3종 검증 · 서울 25개 구 · 상품 룰 7종
     </div>
   </div>
 </section>
