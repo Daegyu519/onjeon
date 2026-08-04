@@ -27,3 +27,8 @@ KB_AI_Challenge_제안서_초안.md
 
 # 문서 빌드 산출물(docx·pdf·html) — docs/summary.md와 diagrams/에서 재생성된다.
 dist-docs/
+
+# 기술설명서 표지의 팀 정보 — 실명·학교라 커밋하지 않는다(공개 저장소).
+# build_deck.py가 빌드할 때만 표지 사본(.build-*.html)에 주입하고 곧바로 지운다.
+docs/deck/team.local.json
+docs/deck/.build-*.html
